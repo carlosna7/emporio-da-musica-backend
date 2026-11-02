@@ -1,0 +1,17 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+
+# Banco gerado pela ingestão (recriado a partir dos CSVs)
+*.db
+
+# Segredos
+.env
+
+# Logs de uso e encaminhamentos gerados em execução
+logs/
