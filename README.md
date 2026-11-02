@@ -5,7 +5,7 @@ Protótipo de um agente de atendimento por texto, em Python, para a Empório da 
 > 🚧 Em construção. As instruções completas, as decisões técnicas e as limitações entram aqui ao final do projeto.
 
 ## Documentação
-- [PRD](docs/PRD.md): problema, requisitos e roadmap
+- [PRDs](docs/prds/): problema, requisitos e roadmap ([PRD-0001 — Agente de atendimento](docs/prds/PRD-0001-agente-atendimento.md))
 - [Decisões técnicas](docs/DECISIONS.md): o que escolhi, por quê e o que descartei
 - [Arquitetura](docs/ARCHITECTURE.md): contratos e convenções (contexto para os agentes de código)
 - [Specs](docs/specs/)
