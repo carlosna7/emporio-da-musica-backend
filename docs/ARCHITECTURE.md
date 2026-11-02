@@ -55,7 +55,7 @@ emporio-da-musica-backend/   # raiz do repositório
 | Variável | Padrão | Uso |
 | --- | --- | --- |
 | `LLM_PROVIDER` | `openai` | `openai` \| `anthropic` \| `gemini` |
-| `LLM_MODEL` | (mini atual da OpenAI) | nome do modelo do provedor |
+| `LLM_MODEL` | `gpt-5.4-mini` | nome do modelo do provedor |
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | — | só a do provedor ativo é obrigatória |
 | `AGENT_TODAY` | data real | fixa "hoje" (testes, avaliação, exemplos) |
 | `MAX_TOOL_ITERATIONS` | `5` | limite do loop ReAct |
@@ -74,12 +74,12 @@ class ToolCall:      id: str; name: str; arguments: dict
 @dataclass
 class Message:       role: Literal["user", "assistant", "tool"]; content: str
                      tool_calls: list[ToolCall] = field(default_factory=list)
-                     tool_call_id: str | None = None
+                     tool_call_id: str | None = None; raw: Any = None
 @dataclass
 class Usage:         input_tokens: int; output_tokens: int; cached_tokens: int = 0
 @dataclass
 class LLMResponse:   text: str | None; tool_calls: list[ToolCall]; usage: Usage | None
-                     provider: str; model: str
+                     provider: str; model: str; raw: Any = None
 
 class LLMClient(Protocol):
     def chat(self, system: str, messages: list[Message], tools: list[ToolSpec]) -> LLMResponse: ...
@@ -87,6 +87,7 @@ class LLMClient(Protocol):
 def criar_cliente(provider: str, model: str) -> LLMClient: ...   # fábrica lida do .env
 ```
 
+- `raw` é opaco e preserva o conteúdo original do provedor quando necessário; fica fora da comparação das mensagens.
 - Cada adaptador converte `Message`/`ToolSpec` para o formato do SDK e converte a resposta de volta. Importa o SDK **dentro** do módulo (extras opcionais).
 - `FakeLLM(roteiro: list[LLMResponse])` devolve respostas pré-definidas e registra as chamadas recebidas. É usado em todos os testes unitários.
 
@@ -101,7 +102,7 @@ class Agente:
     def responder(self, historico: list[Message], mensagem: str, conversa_id: str) -> Resposta: ...
 ```
 
-Loop: envia `system + histórico[-HISTORY_WINDOW:] + mensagem` → se houver `tool_calls`, executa cada uma, anexa os resultados como `role="tool"` e repete → se vier texto, retorna. Se passar de `MAX_TOOL_ITERATIONS`, devolve uma mensagem de fallback oferecendo atendente. Erro dentro de uma tool vira resultado `{"erro": "..."}` para o modelo, e o loop não quebra. Cada chamada ao LLM é registrada (§9).
+Loop: envia `system + histórico[-HISTORY_WINDOW:] + mensagem` → se houver `tool_calls`, executa cada uma, anexa a resposta do assistente com `raw=resp.raw`, anexa os resultados como `role="tool"` e repete → se vier texto, retorna. Se passar de `MAX_TOOL_ITERATIONS`, devolve uma mensagem de fallback oferecendo atendente. Erro dentro de uma tool vira resultado `{"erro": "..."}` para o modelo, e o loop não quebra. Cada chamada ao LLM é registrada (§9).
 
 ## 6. Tools (`app/tools.py`)
 
