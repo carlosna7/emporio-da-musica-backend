@@ -1,6 +1,6 @@
 # SPEC-0003 — Camada de LLM multi-provedor + FakeLLM
 
-- **Status:** aprovada
+- **Status:** implementada
 - **PRD:** [PRD-0001](../prds/PRD-0001-agente-atendimento.md)
 - **Depende de:** —
 
@@ -241,23 +241,23 @@ HIST_2 = [Message("user", "Violão e formas de pagamento?"),
 ```
 
 ### `tests/test_llm_base.py`
-- [ ] `Message("user", "oi")` tem `tool_calls == []`, `tool_call_id is None` e `raw is None`; duas instâncias não compartilham a mesma lista de `tool_calls`.
-- [ ] `Message("assistant", "x", raw=[1]) == Message("assistant", "x")` (o `raw` fica fora da comparação); o mesmo para `LLMResponse`.
-- [ ] `Usage(10, 5).cached_tokens == 0`.
-- [ ] Isolamento dos SDKs: `subprocess.run([sys.executable, "-c", "import sys, app.llm.base, app.llm.providers.fake; assert not {'openai', 'anthropic', 'google.genai'} & set(sys.modules)"], cwd=<raiz do repo>)` termina com código 0.
-- [ ] Fábrica, provedor inválido: `criar_cliente("mistral", "x", api_key="k")` → `LLMError` cuja mensagem contém `"openai"`, `"anthropic"` e `"gemini"`.
-- [ ] Fábrica, chave ausente: com `monkeypatch.delenv("OPENAI_API_KEY", raising=False)`, `criar_cliente("openai", "gpt-5.4-mini")` → `LLMError` contendo `"OPENAI_API_KEY"`. Com `monkeypatch.setenv("OPENAI_API_KEY", "  ")` (só espaços), o resultado é o mesmo.
-- [ ] Fábrica, modelo vazio: `criar_cliente("openai", "", api_key="k")` → `LLMError`.
-- [ ] Fábrica, caso feliz: com `monkeypatch.setenv("OPENAI_API_KEY", "sk-teste")`, `criar_cliente(" OpenAI ", "gpt-5.4-mini")` devolve `OpenAIClient` com `.model == "gpt-5.4-mini"` (o construtor não faz rede).
-- [ ] Fábrica, extra não instalado: `monkeypatch.setitem(sys.modules, "anthropic", None)` e `monkeypatch.delitem(sys.modules, "app.llm.providers.anthropic", raising=False)`; `criar_cliente("anthropic", "claude-haiku-5-5", api_key="k")` → `LLMError` contendo `"pip install"`.
+- [x] `Message("user", "oi")` tem `tool_calls == []`, `tool_call_id is None` e `raw is None`; duas instâncias não compartilham a mesma lista de `tool_calls`.
+- [x] `Message("assistant", "x", raw=[1]) == Message("assistant", "x")` (o `raw` fica fora da comparação); o mesmo para `LLMResponse`.
+- [x] `Usage(10, 5).cached_tokens == 0`.
+- [x] Isolamento dos SDKs: `subprocess.run([sys.executable, "-c", "import sys, app.llm.base, app.llm.providers.fake; assert not {'openai', 'anthropic', 'google.genai'} & set(sys.modules)"], cwd=<raiz do repo>)` termina com código 0.
+- [x] Fábrica, provedor inválido: `criar_cliente("mistral", "x", api_key="k")` → `LLMError` cuja mensagem contém `"openai"`, `"anthropic"` e `"gemini"`.
+- [x] Fábrica, chave ausente: com `monkeypatch.delenv("OPENAI_API_KEY", raising=False)`, `criar_cliente("openai", "gpt-5.4-mini")` → `LLMError` contendo `"OPENAI_API_KEY"`. Com `monkeypatch.setenv("OPENAI_API_KEY", "  ")` (só espaços), o resultado é o mesmo.
+- [x] Fábrica, modelo vazio: `criar_cliente("openai", "", api_key="k")` → `LLMError`.
+- [x] Fábrica, caso feliz: com `monkeypatch.setenv("OPENAI_API_KEY", "sk-teste")`, `criar_cliente(" OpenAI ", "gpt-5.4-mini")` devolve `OpenAIClient` com `.model == "gpt-5.4-mini"` (o construtor não faz rede).
+- [x] Fábrica, extra não instalado: `monkeypatch.setitem(sys.modules, "anthropic", None)` e `monkeypatch.delitem(sys.modules, "app.llm.providers.anthropic", raising=False)`; `criar_cliente("anthropic", "claude-haiku-5-5", api_key="k")` → `LLMError` contendo `"pip install"`.
 
 ### `tests/test_llm_fake.py`
-- [ ] Devolve o roteiro na ordem: com `FakeLLM([resposta_tool("buscar_produtos", termo="violão"), resposta_texto("Achei!")])`, a 1ª chamada tem `tool_calls[0].name == "buscar_produtos"` e `arguments == {"termo": "violão"}`, e a 2ª tem `text == "Achei!"`.
-- [ ] Roteiro esgotado: a 3ª chamada → `LLMError`.
-- [ ] Registra as chamadas: depois de `fake.chat(SYS, msgs, TOOLS)`, `fake.chamadas[0] == {"system": SYS, "messages": msgs, "tools": TOOLS}`.
-- [ ] Guarda uma cópia: um `append` em `msgs` depois da chamada não altera `fake.chamadas[0]["messages"]`.
-- [ ] Não muda a lista de roteiro recebida no construtor.
-- [ ] `resposta_texto` e `resposta_tool` produzem exatamente os objetos da §3.3 (`provider == "fake"`, `usage == Usage(10, 5)`, `id == "call_buscar_produtos"`).
+- [x] Devolve o roteiro na ordem: com `FakeLLM([resposta_tool("buscar_produtos", termo="violão"), resposta_texto("Achei!")])`, a 1ª chamada tem `tool_calls[0].name == "buscar_produtos"` e `arguments == {"termo": "violão"}`, e a 2ª tem `text == "Achei!"`.
+- [x] Roteiro esgotado: a 3ª chamada → `LLMError`.
+- [x] Registra as chamadas: depois de `fake.chat(SYS, msgs, TOOLS)`, `fake.chamadas[0] == {"system": SYS, "messages": msgs, "tools": TOOLS}`.
+- [x] Guarda uma cópia: um `append` em `msgs` depois da chamada não altera `fake.chamadas[0]["messages"]`.
+- [x] Não muda a lista de roteiro recebida no construtor.
+- [x] `resposta_texto` e `resposta_tool` produzem exatamente os objetos da §3.3 (`provider == "fake"`, `usage == Usage(10, 5)`, `id == "call_buscar_produtos"`).
 
 ### `tests/test_llm_openai.py`
 Montagem da resposta (tipos de `openai.types.responses`):
@@ -274,24 +274,24 @@ USO = ResponseUsage(input_tokens=100, output_tokens=20, total_tokens=120,
                     output_tokens_details=OutputTokensDetails(reasoning_tokens=0))
 ```
 Ida (`para_openai`):
-- [ ] Só usuário, sem tools: `para_openai(SYS, [Message("user", "oi")], [])` → `{"instructions": SYS, "input": [{"role": "user", "content": "oi"}]}` (sem a chave `tools`).
-- [ ] Tools: `para_openai(SYS, [...], TOOLS)["tools"] == [{"type": "function", "name": "buscar_produtos", "description": "Busca produtos", "parameters": TOOLS[0].parameters, "strict": False}]`.
-- [ ] Histórico com 1 tool call e resultado (`HIST_1`): `input` tem 3 itens: o usuário; `{"type": "function_call", "call_id": "c1", "name": "buscar_produtos", "arguments": ...}` com `json.loads(arguments) == C1.arguments` e **sem** chave `id`; e `{"type": "function_call_output", "call_id": "c1", "output": '{"itens": []}'}`. Não há item de mensagem para o `assistant` de conteúdo vazio.
-- [ ] Histórico com 2 tool calls (`HIST_2`): os itens ficam na ordem usuário → `{"role": "assistant", "content": "Vou verificar."}` → `function_call` c1 → `function_call` c2 → `function_call_output` c1 → `function_call_output` c2.
-- [ ] `ensure_ascii=False`: o `arguments` de C1 contém o texto literal `"violão"`.
+- [x] Só usuário, sem tools: `para_openai(SYS, [Message("user", "oi")], [])` → `{"instructions": SYS, "input": [{"role": "user", "content": "oi"}]}` (sem a chave `tools`).
+- [x] Tools: `para_openai(SYS, [...], TOOLS)["tools"] == [{"type": "function", "name": "buscar_produtos", "description": "Busca produtos", "parameters": TOOLS[0].parameters, "strict": False}]`.
+- [x] Histórico com 1 tool call e resultado (`HIST_1`): `input` tem 3 itens: o usuário; `{"type": "function_call", "call_id": "c1", "name": "buscar_produtos", "arguments": ...}` com `json.loads(arguments) == C1.arguments` e **sem** chave `id`; e `{"type": "function_call_output", "call_id": "c1", "output": '{"itens": []}'}`. Não há item de mensagem para o `assistant` de conteúdo vazio.
+- [x] Histórico com 2 tool calls (`HIST_2`): os itens ficam na ordem usuário → `{"role": "assistant", "content": "Vou verificar."}` → `function_call` c1 → `function_call` c2 → `function_call_output` c1 → `function_call_output` c2.
+- [x] `ensure_ascii=False`: o `arguments` de C1 contém o texto literal `"violão"`.
 
 Volta (`de_openai`):
-- [ ] Só texto: `de_openai(resposta(texto("Olá!"), usage=USO), "gpt-5.4-mini")` → `text == "Olá!"`, `tool_calls == []`, `provider == "openai"`, `model == "gpt-5.4-mini"` (o configurado, não o snapshot).
-- [ ] 1 tool call: `resposta(chamada("call_1", "buscar_produtos", '{"termo": "violão"}'))` → `text is None`, `tool_calls == [ToolCall("call_1", "buscar_produtos", {"termo": "violão"})]`.
-- [ ] 2 tool calls + texto: `resposta(texto("Vou ver."), chamada("call_1", ...), chamada("call_2", "consultar_politica", '{"topico": "pagamentos"}'))` → `text == "Vou ver."` e 2 `ToolCall` na ordem.
-- [ ] `arguments=""` → `{}`; `arguments="{quebrado"` → `LLMError`.
-- [ ] Usage: com `USO` → `Usage(input_tokens=100, output_tokens=20, cached_tokens=40)`; com `usage=None` → `usage is None`.
-- [ ] Resposta vazia (`resposta()` sem itens) → `LLMError`.
+- [x] Só texto: `de_openai(resposta(texto("Olá!"), usage=USO), "gpt-5.4-mini")` → `text == "Olá!"`, `tool_calls == []`, `provider == "openai"`, `model == "gpt-5.4-mini"` (o configurado, não o snapshot).
+- [x] 1 tool call: `resposta(chamada("call_1", "buscar_produtos", '{"termo": "violão"}'))` → `text is None`, `tool_calls == [ToolCall("call_1", "buscar_produtos", {"termo": "violão"})]`.
+- [x] 2 tool calls + texto: `resposta(texto("Vou ver."), chamada("call_1", ...), chamada("call_2", "consultar_politica", '{"topico": "pagamentos"}'))` → `text == "Vou ver."` e 2 `ToolCall` na ordem.
+- [x] `arguments=""` → `{}`; `arguments="{quebrado"` → `LLMError`.
+- [x] Usage: com `USO` → `Usage(input_tokens=100, output_tokens=20, cached_tokens=40)`; com `usage=None` → `usage is None`.
+- [x] Resposta vazia (`resposta()` sem itens) → `LLMError`.
 
 `chat()` com cliente falso:
-- [ ] `capturado = {}`; `falso = SimpleNamespace(responses=SimpleNamespace(create=lambda **kw: capturado.update(kw) or resposta(texto("ok"), usage=USO)))`; `OpenAIClient("gpt-5.4-mini", "k", cliente=falso).chat(SYS, [Message("user", "oi")], TOOLS)` devolve `text == "ok"`, e `capturado` tem `model == "gpt-5.4-mini"`, `store is False`, `temperature == 0.2`, `instructions == SYS` e `tools`.
-- [ ] Com `temperature=None`, a chave `temperature` não aparece em `capturado`.
-- [ ] Se o `create` falso levantar `openai.OpenAIError("caiu")`, `chat()` levanta `LLMError` e a mensagem contém `"openai"`.
+- [x] `capturado = {}`; `falso = SimpleNamespace(responses=SimpleNamespace(create=lambda **kw: capturado.update(kw) or resposta(texto("ok"), usage=USO)))`; `OpenAIClient("gpt-5.4-mini", "k", cliente=falso).chat(SYS, [Message("user", "oi")], TOOLS)` devolve `text == "ok"`, e `capturado` tem `model == "gpt-5.4-mini"`, `store is False`, `temperature == 0.2`, `instructions == SYS` e `tools`.
+- [x] Com `temperature=None`, a chave `temperature` não aparece em `capturado`.
+- [x] Se o `create` falso levantar `openai.OpenAIError("caiu")`, `chat()` levanta `LLMError` e a mensagem contém `"openai"`.
 
 ### `tests/test_llm_anthropic.py`
 Montagem (tipos de `anthropic.types`):
@@ -302,23 +302,23 @@ def resposta(*blocos, usage=None):
                                    usage=usage or Usage(input_tokens=50, output_tokens=10))
 ```
 Ida (`para_anthropic`):
-- [ ] Só usuário: `para_anthropic(SYS, [Message("user", "oi")], [])` → `{"system": SYS, "messages": [{"role": "user", "content": "oi"}]}` (sem `tools`).
-- [ ] Tools: `["tools"] == [{"name": "buscar_produtos", "description": "Busca produtos", "input_schema": TOOLS[0].parameters}]`.
-- [ ] `HIST_1` → `messages == [{"role": "user", "content": "Tem violão até 1000?"}, {"role": "assistant", "content": [{"type": "tool_use", "id": "c1", "name": "buscar_produtos", "input": C1.arguments}]}, {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "c1", "content": '{"itens": []}'}]}]` (sem bloco de texto vazio).
-- [ ] `HIST_2` → a mensagem `assistant` tem `[{"type": "text", "text": "Vou verificar."}, tool_use c1, tool_use c2]`, e os **dois** `tool_result` vêm numa **única** mensagem `user` (total de 3 mensagens).
-- [ ] `assistant` com `raw`: `Message("assistant", "", tool_calls=[C1], raw=[{"type": "thinking", "thinking": "", "signature": "sig"}, {"type": "tool_use", "id": "c1", "name": "buscar_produtos", "input": C1.arguments}])` é convertida para `{"role": "assistant", "content": <esse raw, idêntico>}`.
-- [ ] `assistant` só com texto: `Message("assistant", "Olá")` → `{"role": "assistant", "content": "Olá"}`.
+- [x] Só usuário: `para_anthropic(SYS, [Message("user", "oi")], [])` → `{"system": SYS, "messages": [{"role": "user", "content": "oi"}]}` (sem `tools`).
+- [x] Tools: `["tools"] == [{"name": "buscar_produtos", "description": "Busca produtos", "input_schema": TOOLS[0].parameters}]`.
+- [x] `HIST_1` → `messages == [{"role": "user", "content": "Tem violão até 1000?"}, {"role": "assistant", "content": [{"type": "tool_use", "id": "c1", "name": "buscar_produtos", "input": C1.arguments}]}, {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "c1", "content": '{"itens": []}'}]}]` (sem bloco de texto vazio).
+- [x] `HIST_2` → a mensagem `assistant` tem `[{"type": "text", "text": "Vou verificar."}, tool_use c1, tool_use c2]`, e os **dois** `tool_result` vêm numa **única** mensagem `user` (total de 3 mensagens).
+- [x] `assistant` com `raw`: `Message("assistant", "", tool_calls=[C1], raw=[{"type": "thinking", "thinking": "", "signature": "sig"}, {"type": "tool_use", "id": "c1", "name": "buscar_produtos", "input": C1.arguments}])` é convertida para `{"role": "assistant", "content": <esse raw, idêntico>}`.
+- [x] `assistant` só com texto: `Message("assistant", "Olá")` → `{"role": "assistant", "content": "Olá"}`.
 
 Volta (`de_anthropic`):
-- [ ] Só texto: `resposta(TextBlock(type="text", text="Olá!"))` → `text == "Olá!"`, `tool_calls == []`, `provider == "anthropic"`, `model == "claude-haiku-5-5"`.
-- [ ] 1 tool call: `resposta(ToolUseBlock(type="tool_use", id="toolu_1", name="buscar_produtos", input={"termo": "violão"}))` → `text is None`, `tool_calls == [ToolCall("toolu_1", "buscar_produtos", {"termo": "violão"})]`.
-- [ ] 2 tool calls + texto + thinking: `resposta(ThinkingBlock(type="thinking", thinking="", signature="sig"), TextBlock(type="text", text="Vou ver."), ToolUseBlock(... "toolu_1" ...), ToolUseBlock(... "toolu_2", name="consultar_politica", input={"topico": "pagamentos"}))` → `text == "Vou ver."`, 2 `ToolCall` na ordem, e `raw[0] == {"type": "thinking", "thinking": "", "signature": "sig"}` com `len(raw) == 4`.
-- [ ] Usage: `Usage(input_tokens=50, output_tokens=10, cache_read_input_tokens=30, cache_creation_input_tokens=None)` (tipo do SDK) → `Usage(80, 10, 30)` neutro; sem campos de cache → `Usage(50, 10, 0)`.
-- [ ] Resposta sem blocos → `LLMError`.
+- [x] Só texto: `resposta(TextBlock(type="text", text="Olá!"))` → `text == "Olá!"`, `tool_calls == []`, `provider == "anthropic"`, `model == "claude-haiku-5-5"`.
+- [x] 1 tool call: `resposta(ToolUseBlock(type="tool_use", id="toolu_1", name="buscar_produtos", input={"termo": "violão"}))` → `text is None`, `tool_calls == [ToolCall("toolu_1", "buscar_produtos", {"termo": "violão"})]`.
+- [x] 2 tool calls + texto + thinking: `resposta(ThinkingBlock(type="thinking", thinking="", signature="sig"), TextBlock(type="text", text="Vou ver."), ToolUseBlock(... "toolu_1" ...), ToolUseBlock(... "toolu_2", name="consultar_politica", input={"topico": "pagamentos"}))` → `text == "Vou ver."`, 2 `ToolCall` na ordem, e `raw[0] == {"type": "thinking", "thinking": "", "signature": "sig"}` com `len(raw) == 4`.
+- [x] Usage: `Usage(input_tokens=50, output_tokens=10, cache_read_input_tokens=30, cache_creation_input_tokens=None)` (tipo do SDK) → `Usage(80, 10, 30)` neutro; sem campos de cache → `Usage(50, 10, 0)`.
+- [x] Resposta sem blocos → `LLMError`.
 
 `chat()` com cliente falso (`SimpleNamespace(messages=SimpleNamespace(create=...))`):
-- [ ] Os kwargs capturados têm `model`, `max_tokens == MAX_TOKENS`, `system == SYS`, e **não** têm `temperature`.
-- [ ] `anthropic.AnthropicError("caiu")` → `LLMError`.
+- [x] Os kwargs capturados têm `model`, `max_tokens == MAX_TOKENS`, `system == SYS`, e **não** têm `temperature`.
+- [x] `anthropic.AnthropicError("caiu")` → `LLMError`.
 
 ### `tests/test_llm_gemini.py`
 Montagem (`from google.genai import types`):
@@ -331,35 +331,35 @@ def fc(name, args, id=None, assinatura=None):
     return types.Part(function_call=types.FunctionCall(id=id, name=name, args=args), thought_signature=assinatura)
 ```
 Ida (`para_gemini`), comparando objetos `types.*` com `==` (o pydantic compara campo a campo):
-- [ ] Só usuário, sem tools: `contents == [types.Content(role="user", parts=[types.Part(text="oi")])]`, `config.system_instruction == SYS`, `config.tools is None`, `config.temperature is None`.
-- [ ] Tools: `config.tools[0].function_declarations[0]` tem `name == "buscar_produtos"` e `parameters_json_schema == TOOLS[0].parameters`.
-- [ ] `HIST_1` → 3 `Content`: user; `model` com `Part(function_call=FunctionCall(id="c1", name="buscar_produtos", args=C1.arguments))`; `user` com `Part(function_response=FunctionResponse(id="c1", name="buscar_produtos", response={"result": {"itens": []}}))`.
-- [ ] `HIST_2` → o `Content` `model` tem 3 partes (texto + 2 function_call), e os dois `function_response` (nomes `buscar_produtos` e `consultar_politica`, resolvidos pelo id) vêm num **único** `Content` `user`.
-- [ ] Ids gerados: com `ToolCall("gemini_0_buscar_produtos", ...)` e o `tool_call_id` correspondente, `FunctionCall.id is None` e `FunctionResponse.id is None`.
-- [ ] `assistant` com `raw`: o `types.Content` passado em `raw` aparece **o mesmo objeto** (`is`) em `contents`, com a `thought_signature` preservada.
-- [ ] Resultado que não é JSON (`Message("tool", "texto solto", tool_call_id="c1")`) → `response == {"result": "texto solto"}`.
-- [ ] `tool_call_id` sem chamada anterior → `LLMError`.
+- [x] Só usuário, sem tools: `contents == [types.Content(role="user", parts=[types.Part(text="oi")])]`, `config.system_instruction == SYS`, `config.tools is None`, `config.temperature is None`.
+- [x] Tools: `config.tools[0].function_declarations[0]` tem `name == "buscar_produtos"` e `parameters_json_schema == TOOLS[0].parameters`.
+- [x] `HIST_1` → 3 `Content`: user; `model` com `Part(function_call=FunctionCall(id="c1", name="buscar_produtos", args=C1.arguments))`; `user` com `Part(function_response=FunctionResponse(id="c1", name="buscar_produtos", response={"result": {"itens": []}}))`.
+- [x] `HIST_2` → o `Content` `model` tem 3 partes (texto + 2 function_call), e os dois `function_response` (nomes `buscar_produtos` e `consultar_politica`, resolvidos pelo id) vêm num **único** `Content` `user`.
+- [x] Ids gerados: com `ToolCall("gemini_0_buscar_produtos", ...)` e o `tool_call_id` correspondente, `FunctionCall.id is None` e `FunctionResponse.id is None`.
+- [x] `assistant` com `raw`: o `types.Content` passado em `raw` aparece **o mesmo objeto** (`is`) em `contents`, com a `thought_signature` preservada.
+- [x] Resultado que não é JSON (`Message("tool", "texto solto", tool_call_id="c1")`) → `response == {"result": "texto solto"}`.
+- [x] `tool_call_id` sem chamada anterior → `LLMError`.
 
 Volta (`de_gemini`):
-- [ ] Só texto: `resposta(types.Part(text="Olá!"))` → `text == "Olá!"`, `tool_calls == []`, `provider == "gemini"`.
-- [ ] Parte de pensamento é ignorada: `resposta(types.Part(text="pensando", thought=True), types.Part(text="Olá!"))` → `text == "Olá!"`.
-- [ ] 1 tool call sem id: `resposta(fc("buscar_produtos", {"termo": "violão"}, assinatura=b"sig"))` → `tool_calls == [ToolCall("gemini_0_buscar_produtos", "buscar_produtos", {"termo": "violão"})]`, `text is None`, e `raw.parts[0].thought_signature == b"sig"`.
-- [ ] 2 tool calls com id: `resposta(fc("buscar_produtos", {...}, id="a"), fc("consultar_politica", {"topico": "pagamentos"}, id="b"))` → ids `"a"` e `"b"`, na ordem.
-- [ ] Ida e volta: o `raw` de uma resposta com tool call, colocado numa `Message("assistant", "", tool_calls=..., raw=...)` e reconvertido por `para_gemini`, mantém `thought_signature == b"sig"`.
-- [ ] Usage: `types.GenerateContentResponseUsageMetadata(prompt_token_count=100, candidates_token_count=10, thoughts_token_count=5, cached_content_token_count=60)` → `Usage(100, 15, 60)`; `usage_metadata=None` → `usage is None`.
-- [ ] Sem candidatos (`types.GenerateContentResponse(candidates=[])`) → `LLMError`.
+- [x] Só texto: `resposta(types.Part(text="Olá!"))` → `text == "Olá!"`, `tool_calls == []`, `provider == "gemini"`.
+- [x] Parte de pensamento é ignorada: `resposta(types.Part(text="pensando", thought=True), types.Part(text="Olá!"))` → `text == "Olá!"`.
+- [x] 1 tool call sem id: `resposta(fc("buscar_produtos", {"termo": "violão"}, assinatura=b"sig"))` → `tool_calls == [ToolCall("gemini_0_buscar_produtos", "buscar_produtos", {"termo": "violão"})]`, `text is None`, e `raw.parts[0].thought_signature == b"sig"`.
+- [x] 2 tool calls com id: `resposta(fc("buscar_produtos", {...}, id="a"), fc("consultar_politica", {"topico": "pagamentos"}, id="b"))` → ids `"a"` e `"b"`, na ordem.
+- [x] Ida e volta: o `raw` de uma resposta com tool call, colocado numa `Message("assistant", "", tool_calls=..., raw=...)` e reconvertido por `para_gemini`, mantém `thought_signature == b"sig"`.
+- [x] Usage: `types.GenerateContentResponseUsageMetadata(prompt_token_count=100, candidates_token_count=10, thoughts_token_count=5, cached_content_token_count=60)` → `Usage(100, 15, 60)`; `usage_metadata=None` → `usage is None`.
+- [x] Sem candidatos (`types.GenerateContentResponse(candidates=[])`) → `LLMError`.
 
 `chat()` com cliente falso (`SimpleNamespace(models=SimpleNamespace(generate_content=...))`):
-- [ ] Os kwargs capturados têm `model`, `contents` e `config`.
-- [ ] `google.genai.errors.APIError(500, {"error": {"message": "caiu"}})` → `LLMError`.
+- [x] Os kwargs capturados têm `model`, `contents` e `config`.
+- [x] `google.genai.errors.APIError(500, {"error": {"message": "caiu"}})` → `LLMError`.
 
 ### `tests/test_precos_modelos.py`
-- [ ] Com cache: `custo_estimado("gpt-5.4-mini", Usage(10_000, 1_000, 4_000)) == pytest.approx(0.0093)` (6.000 × 0,75 + 4.000 × 0,075 + 1.000 × 4,50 = 9.300 por 1M).
-- [ ] Sem cache: `custo_estimado("gpt-5.4-mini", Usage(1_000_000, 1_000_000)) == pytest.approx(5.25)`.
-- [ ] `entrada_cache=None` cobra o cache como entrada: com `monkeypatch.setitem(PRECOS, "x", PrecoModelo(1.0, 2.0))`, `custo_estimado("x", Usage(1_000_000, 0, 500_000)) == pytest.approx(1.0)`.
-- [ ] Modelo fora da tabela → `None`, incluindo o snapshot `"gpt-5.4-mini-2026-03-17"` (a busca é exata).
-- [ ] `usage=None` → `None`.
-- [ ] Os valores confirmados estão na tabela: `PRECOS["gpt-5.4-mini"] == PrecoModelo(0.75, 4.50, 0.075)`.
+- [x] Com cache: `custo_estimado("gpt-5.4-mini", Usage(10_000, 1_000, 4_000)) == pytest.approx(0.0093)` (6.000 × 0,75 + 4.000 × 0,075 + 1.000 × 4,50 = 9.300 por 1M).
+- [x] Sem cache: `custo_estimado("gpt-5.4-mini", Usage(1_000_000, 1_000_000)) == pytest.approx(5.25)`.
+- [x] `entrada_cache=None` cobra o cache como entrada: com `monkeypatch.setitem(PRECOS, "x", PrecoModelo(1.0, 2.0))`, `custo_estimado("x", Usage(1_000_000, 0, 500_000)) == pytest.approx(1.0)`.
+- [x] Modelo fora da tabela → `None`, incluindo o snapshot `"gpt-5.4-mini-2026-03-17"` (a busca é exata).
+- [x] `usage=None` → `None`.
+- [x] Os valores confirmados estão na tabela: `PRECOS["gpt-5.4-mini"] == PrecoModelo(0.75, 4.50, 0.075)`.
 
 - **Fixtures/mocks:** `monkeypatch` (variáveis de ambiente, `sys.modules`, `PRECOS`), `SimpleNamespace` como cliente do SDK, tipos reais dos SDKs para as respostas. Não precisa de banco nem de `tmp_path`.
 
@@ -378,16 +378,16 @@ Commits seguindo o ciclo da spec (AGENTS.md, D16). A spec fica "implementada" s�
 Antes de cada commit: `pytest` e `ruff check .` verdes, exceto nos commits `test(...)`, em que só os testes novos falham.
 
 ## 7. Critérios de aceite
-- [ ] [AC-01] Importar `app.llm.base` e `app.llm.providers.fake` não carrega `openai`, `anthropic` nem `google.genai` (teste com `subprocess`).
-- [ ] [AC-02] `criar_cliente` levanta `LLMError` com mensagem útil para provedor desconhecido, modelo vazio, chave ausente ou em branco e extra não instalado, e devolve o adaptador certo no caso feliz.
-- [ ] [AC-03] `FakeLLM` devolve o roteiro na ordem, guarda uma cópia de cada chamada e falha com `LLMError` quando o roteiro acaba.
-- [ ] [AC-04] OpenAI: ida e volta cobrem só texto, 1 e 2 tool calls, histórico com resultado de tool e usage com cache, no formato da Responses API da §3.2, com `store=False` e sem `id` nos itens `function_call`.
-- [ ] [AC-05] Anthropic: system no parâmetro `system`, resultados de tool agrupados numa única mensagem `user`, `raw` com os blocos originais (inclusive `thinking`), usage somando o cache à entrada e nenhum envio de `temperature`.
-- [ ] [AC-06] Gemini: `function_response` com `name` resolvido pelo id, ids gerados para chamadas sem id, `thought_signature` preservada ida e volta via `raw`, raciocínio contado como saída e nenhum envio de `temperature`.
-- [ ] [AC-07] Erros dos SDKs e respostas vazias ou bloqueadas viram `LLMError`, e `text is None` só ocorre com `tool_calls` não vazio.
-- [ ] [AC-08] `custo_estimado` segue a fórmula da §3.4, devolve `None` para modelo fora da tabela (busca exata) ou sem usage, e a tabela tem os preços conferidos em 2026-11-02 com as fontes no módulo.
-- [ ] [AC-TESTES] `pytest` verde, sem acesso à rede. Com os extras instalados, nenhum teste é pulado.
-- [ ] [AC-LINT] `ruff check .` verde.
+- [x] [AC-01] Importar `app.llm.base` e `app.llm.providers.fake` não carrega `openai`, `anthropic` nem `google.genai` (teste com `subprocess`).
+- [x] [AC-02] `criar_cliente` levanta `LLMError` com mensagem útil para provedor desconhecido, modelo vazio, chave ausente ou em branco e extra não instalado, e devolve o adaptador certo no caso feliz.
+- [x] [AC-03] `FakeLLM` devolve o roteiro na ordem, guarda uma cópia de cada chamada e falha com `LLMError` quando o roteiro acaba.
+- [x] [AC-04] OpenAI: ida e volta cobrem só texto, 1 e 2 tool calls, histórico com resultado de tool e usage com cache, no formato da Responses API da §3.2, com `store=False` e sem `id` nos itens `function_call`.
+- [x] [AC-05] Anthropic: system no parâmetro `system`, resultados de tool agrupados numa única mensagem `user`, `raw` com os blocos originais (inclusive `thinking`), usage somando o cache à entrada e nenhum envio de `temperature`.
+- [x] [AC-06] Gemini: `function_response` com `name` resolvido pelo id, ids gerados para chamadas sem id, `thought_signature` preservada ida e volta via `raw`, raciocínio contado como saída e nenhum envio de `temperature`.
+- [x] [AC-07] Erros dos SDKs e respostas vazias ou bloqueadas viram `LLMError`, e `text is None` só ocorre com `tool_calls` não vazio.
+- [x] [AC-08] `custo_estimado` segue a fórmula da §3.4, devolve `None` para modelo fora da tabela (busca exata) ou sem usage, e a tabela tem os preços conferidos em 2026-11-02 com as fontes no módulo.
+- [x] [AC-TESTES] `pytest` verde, sem acesso à rede. Com os extras instalados, nenhum teste é pulado.
+- [x] [AC-LINT] `ruff check .` verde.
 - **Verificação manual (opcional, autor, custa centavos):** com a chave no `.env`, rodar uma vez por provedor configurado:
   ```python
   from dotenv import load_dotenv; load_dotenv(); import os
