@@ -30,8 +30,8 @@ emporio-da-musica-backend/   # raiz do repositório
   data/politicas.md         # manual convertido e revisado
   app/
     config.py               # lê .env
-    ingest.py               # CSV → SQLite
-    db.py                   # conexão e consultas
+    ingest.py               # CSV → SQLite (python -m app.ingest)
+    db.py                   # conexão somente leitura + normalizar()
     precos.py               # regras de preço (promo, PIX)
     politicas.py            # carrega politicas.md e mapeia tópicos
     tools.py                # funções das tools + ToolSpec de cada uma
@@ -141,11 +141,12 @@ Regras:
 ## 7. Banco (SQLite, gerado por `ingest.py`)
 
 Tabelas espelham os CSVs: `categories`, `products`, `customers`, `orders`, `order_items`, `promotions`.
+Arquivo: `data/emporio.db` (fora do git), recriado do zero por `python -m app.ingest`. Em tempo de execução é aberto com `mode=ro`. Schema completo: [SPEC-0001 §3](specs/SPEC-0001-ingestao-dados.md#3-contrato).
 Extras da ingestão: `products.nome_normalizado`; `products.specs` como texto JSON validado; preços `REAL`; estoque `INTEGER`; datas ISO `TEXT`; vazio → `NULL`.
 Inconsistências conhecidas e o tratamento de cada uma: [DECISIONS.md — Tratamento dos dados](DECISIONS.md#d13--tratamento-dos-dados-e-suposições).
 
 ## 8. System prompt (`app/prompts.py`)
-Montado a partir do manual §7 e §10. Contém: persona **Emilio** (informal, profissional, "amigo que entende de música"); data de hoje; horário de funcionamento (para avisar fora do expediente); regras:
+Montado a partir do manual §7 e §10. Contém: persona **Emilio** (informal, profissional, "amigo que entende de música"); data de hoje; horário de funcionamento (para avisar fora do expediente); **contatos oficiais da D13** (endereço, telefone/WhatsApp (67) 3341-4444, `contato@emporiodamusica.com.br`) com a instrução de usá-los mesmo que o manual traga outro número ou e-mail; regras:
 1. Nunca informar preço, estoque, prazo ou status sem tool.
 2. Políticas → `consultar_politica`; dados → tools de produto/pedido.
 3. Só instrumentos: acessórios são redirecionados com educação; assuntos fora da loja são recusados com gentileza.

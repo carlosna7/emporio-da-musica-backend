@@ -103,8 +103,9 @@ A ingestão normaliza os tipos (preço → número, estoque → inteiro, `specs`
 
 | Achado | Tratamento |
 | --- | --- |
-| Telefone: (67) 3341-4444 (capa e dados da empresa) × (67) 3321-4500 (§7, WhatsApp) | Uso o **3341-4444**, que aparece como "Telefone / WhatsApp" na tabela oficial, e registro a divergência |
-| E-mail com acento (`empóriodamusica`) na §1.2 | Uso `contato@emporiodamusica.com.br` (capa, domínio válido) |
+| Telefone: (67) 3341-4444 (capa e dados da empresa) × (67) 3321-4500 (§7, WhatsApp) | Uso só o **3341-4444**, que aparece como "Telefone / WhatsApp" na tabela oficial. O 3321-4500 é desconsiderado: o system prompt traz os contatos oficiais e manda usar apenas eles |
+| E-mail com acento (`empóriodamusica`) na §1.2 | Uso `contato@emporiodamusica.com.br` (capa, domínio válido). Corrigi a §1.2 no `politicas.md`; é a única alteração em relação ao PDF |
+| E-mail `bruno.martins@jmail.com` em dois clientes (11 e 43, nomes e telefones diferentes) | Não corrijo o dado, porque não sei qual cadastro está certo, e corrigir seria inventar. Por isso o e-mail fica sem `UNIQUE` no banco. Para o agente não muda nada: a consulta de pedido compara o e-mail com o cliente **daquele pedido**, e nunca procura cliente só pelo e-mail. Num sistema real o e-mail seria único, e a equipe resolveria na origem: se for a mesma pessoa, unifica os cadastros; se forem duas, pede a uma delas que atualize o e-mail |
 | Cartão: a tabela diz "parcela mínima R$ 100" × §3.1 com faixas (até 3x / 4–6x R$ 80 / 7–12x R$ 100) | Sigo a §3.1, que é mais específica. Interpreto "até 3x, exceto abaixo de R$ 50" como parcela mínima de R$ 50 |
 | Pedidos não têm data de recebimento | Uso `estimated_delivery` como data de recebimento para o prazo de arrependimento |
 | `total_brl` difere da soma dos itens em alguns pedidos | `total_brl` é a fonte da verdade (pode incluir frete ou desconto); o agente não recalcula |
@@ -127,10 +128,19 @@ A ingestão normaliza os tipos (preço → número, estoque → inteiro, `specs`
 
 ## D16 — Repositório
 - Os dados necessários (CSVs + `políticas_da_loja.pdf`) são copiados para `data/raw/` com nomes simples (sem espaços nem acentos). O material original do desafio fica fora do repositório, porque contém o PDF do enunciado da empresa.
-- Um commit por passo relevante de cada spec. O desafio pede histórico real de commits.
+- O histórico de commits segue o ciclo de cada spec (Conventional Commits):
+  1. `docs:` a spec escrita e aprovada;
+  2. `test:` os testes da spec, ainda falhando (*red*);
+  3. `feat:` a implementação que faz os testes passarem (*green*), com a spec marcada como implementada;
+  4. `fix:` / `refactor:` ajustes que vierem da revisão, se houver.
+- **Por quê:** o desafio pede histórico com progresso real. Separar o commit de teste do commit de código deixa o TDD visível no próprio histórico, sem precisar acreditar na minha palavra.
 
 ## D17 — Uso de assistentes de código
 - **Planejamento e documentos** (PRD, decisões, specs): Claude Opus, como par de discussão. Eu levo as dúvidas e as ideias (inclusive sugestões de outro assistente, o ChatGPT), avalio as opções e decido. Este arquivo registra essas decisões.
 - **Dois documentos, dois públicos:** este `DECISIONS.md` explica meu raciocínio para quem avalia. O [`ARCHITECTURE.md`](ARCHITECTURE.md) é o contexto técnico para os agentes de código: contratos, esquemas e convenções, sem justificativas. Separar os dois evita que os agentes recebam texto que não precisam e que o meu raciocínio se perca no meio de detalhes de implementação.
-- **Implementação:** agentes e subagentes (Claude Haiku/Sonnet ou GPT via Codex), uma spec por vez, com TDD. As regras estão em [`AGENTS.md`](../AGENTS.md).
+- **Escolha do modelo por tarefa:** usar o modelo mais forte onde o erro custa mais caro.
+  - **Specs:** um subagente Claude Opus (esforço *high*) escreve cada spec a partir do PRD, do ARCHITECTURE e dos dados reais. Specs independentes (ex.: SPEC-0001 e SPEC-0003) são escritas em paralelo. Uma spec ambígua contamina toda a implementação, por isso aqui vale o modelo mais caro.
+  - **Implementação:** modelos mais baratos (Claude Haiku/Sonnet ou GPT via Codex), uma spec por vez, com TDD. Com a spec detalhada e os testes escritos antes, a tarefa fica bem delimitada e um modelo menor dá conta. As regras estão em [`AGENTS.md`](../AGENTS.md).
+  - **Revisão:** a sessão principal (Opus) confere o código contra a spec antes de cada commit.
+- **Dados de entrada:** o manual em PDF foi transcrito para Markdown pelo assistente, mantendo o texto original, e eu validei a transcrição comparando com o PDF.
 - **Revisão humana:** reviso cada spec antes de implementar e cada passo antes do commit.

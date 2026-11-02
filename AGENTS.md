@@ -22,7 +22,13 @@ O avaliador mede **raciocínio, clareza e iniciativa**. Simplicidade vence sofis
 pytest
 ruff check .
 ```
-Tudo verde → marque os critérios de aceite da spec → um commit pequeno com mensagem descritiva (ex.: `feat(ingest): carrega produtos no SQLite`).
+Ciclo de commits de cada spec (Conventional Commits; o escopo é o módulo):
+1. `docs(spec): SPEC-NNNN <nome>`: a spec aprovada.
+2. `test(<escopo>): ...`: só os testes, rodados e **falhando** (*red*).
+3. `feat(<escopo>): ...`: a implementação com `pytest` e `ruff` verdes, critérios de aceite marcados e status da spec = implementada.
+4. `fix:` / `refactor:` se a revisão pedir ajustes.
+
+Só faça commit quando o autor pedir.
 
 ## Não mexa
 - O frontend, que vive em outro repositório (`../emporio-da-musica-frontend/`). Só o futuro PRD-0002, opcional, toca nele.

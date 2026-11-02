@@ -36,17 +36,17 @@ Comece no *red*. Unit tests nunca chamam a API real (ver ARCHITECTURE §11).
 - **Fixtures/mocks:** (banco SQLite temporário em `tmp_path`, `FakeLLM`, etc.)
 
 ## 6. Plano
-Passos pequenos; cada um termina em testes verdes e **um commit**.
+Passos pequenos e ordenados. Os commits seguem o ciclo da spec (ver D16):
 
-1. Escrever testes de X (red)
-2. Implementar X (green)
+1. Escrever os testes da §5 e confirmar que falham → commit `test(<escopo>): ...`
+2. Implementar até os testes passarem → commit `feat(<escopo>): ...` (marcar a spec como implementada)
 3. …
 
 ## 7. Critérios de aceite
 IDs fixos; ajuste o texto, mas não o ID.
 
 - [ ] [AC-01] Comportamento observável, com a evidência esperada
-- [ ] [AC-TESTES] `pytest` verde (em a raiz do repositório)
+- [ ] [AC-TESTES] `pytest` verde
 - [ ] [AC-LINT] `ruff check .` verde
 - **Verificação manual:** comando → resultado esperado
 

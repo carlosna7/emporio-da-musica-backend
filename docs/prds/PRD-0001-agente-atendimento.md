@@ -46,7 +46,7 @@ Repositório público com histórico de commits · README (como rodar, decisões
 ## Roadmap de specs
 | Spec | Entrega | Depende de |
 | --- | --- | --- |
-| SPEC-0001 | Ingestão: CSV + PDF → SQLite + `politicas.md` | — |
+| SPEC-0001 | Ingestão: CSV → SQLite + leitura de `politicas.md` por tópico | — |
 | SPEC-0002 | Ferramentas do agente (produtos, pedidos, políticas, encaminhamento) | SPEC-0001 |
 | SPEC-0003 | Camada de LLM multi-provedor + `FakeLLM` | — |
 | SPEC-0004 | Agente: loop ReAct, persona, memória da conversa, registro de uso | SPEC-0002, SPEC-0003 |
