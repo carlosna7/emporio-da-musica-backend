@@ -1,6 +1,6 @@
 # SPEC-0001 — Ingestão de dados e leitura das políticas
 
-- **Status:** aprovada
+- **Status:** implementada
 - **PRD:** [PRD-0001](../prds/PRD-0001-agente-atendimento.md)
 - **Depende de:** —
 
@@ -158,35 +158,35 @@ Comece no *red* (falhar por `ModuleNotFoundError` conta como red). Números conf
 **Helper local em `test_ingest.py`** — `copiar_csvs(tmp_path) -> Path`: copia os 6 CSVs de `data/raw` para `tmp_path / "raw"` (`shutil.copy`). Para editar uma linha: ler com `csv.DictReader`, alterar o campo, regravar com `csv.DictWriter` (mesmos `fieldnames`, `encoding="utf-8"`, `newline=""`). **Nunca** escrever em `data/raw`.
 
 ### `tests/test_db.py`
-- [ ] `normalizar`: `"Violão Elétrico AÇO"` → `"violao eletrico aco"`; `"Barítono"` → `"baritono"`; `"Gibson Les Paul Standard '50s"` → `"gibson les paul standard '50s"`; `""` → `""`.
-- [ ] `conectar(banco)` lê com `sqlite3.Row`: `SELECT name FROM categories WHERE category_id = 5` → `row["name"] == "Violões"`.
-- [ ] Somente leitura: `conexao.execute("DELETE FROM products")` levanta `sqlite3.OperationalError` (`match="readonly"`).
-- [ ] Banco inexistente: `conectar(tmp_path / "nao_existe.db")` levanta `FileNotFoundError` com `"python -m app.ingest"` na mensagem, e o arquivo **continua não existindo** depois.
-- [ ] Caminho com espaço e acento: `criar_banco(destino=tmp_path / "com espaço" / "emporio.db")` (a pasta não existe antes: `criar_banco` cria com `mkdir(parents=True, exist_ok=True)`); `conectar` nesse caminho e `SELECT COUNT(*) FROM products` → `65`.
+- [x] `normalizar`: `"Violão Elétrico AÇO"` → `"violao eletrico aco"`; `"Barítono"` → `"baritono"`; `"Gibson Les Paul Standard '50s"` → `"gibson les paul standard '50s"`; `""` → `""`.
+- [x] `conectar(banco)` lê com `sqlite3.Row`: `SELECT name FROM categories WHERE category_id = 5` → `row["name"] == "Violões"`.
+- [x] Somente leitura: `conexao.execute("DELETE FROM products")` levanta `sqlite3.OperationalError` (`match="readonly"`).
+- [x] Banco inexistente: `conectar(tmp_path / "nao_existe.db")` levanta `FileNotFoundError` com `"python -m app.ingest"` na mensagem, e o arquivo **continua não existindo** depois.
+- [x] Caminho com espaço e acento: `criar_banco(destino=tmp_path / "com espaço" / "emporio.db")` (a pasta não existe antes: `criar_banco` cria com `mkdir(parents=True, exist_ok=True)`); `conectar` nesse caminho e `SELECT COUNT(*) FROM products` → `65`.
 
 ### `tests/test_ingest.py`
-- [ ] **Contagens:** o retorno de `criar_banco` é `{"categories": 9, "customers": 50, "products": 65, "orders": 20, "order_items": 22, "promotions": 25}` e `SELECT COUNT(*)` de cada tabela bate com ele.
-- [ ] **Produto 95 completo:** `SELECT * FROM products WHERE product_id = 95` →
+- [x] **Contagens:** o retorno de `criar_banco` é `{"categories": 9, "customers": 50, "products": 65, "orders": 20, "order_items": 22, "promotions": 25}` e `SELECT COUNT(*)` de cada tabela bate com ele.
+- [x] **Produto 95 completo:** `SELECT * FROM products WHERE product_id = 95` →
   `name == "Takamine GD20 Dreadnought Natural"`, `nome_normalizado == "takamine gd20 dreadnought natural"`, `category_id == 5`, `price_brl == 2199.0` e `isinstance(price_brl, float)`, `stock_quantity == 5` e `isinstance(..., int)`, `status == "active"`, `created_at == "2021-11-03"`,
   `json.loads(specs) == {"top": "Cedro Sólido", "back_sides": "Sapele", "neck": "Mogno", "strings": "steel", "scale": "650mm", "electronics": "no", "color": "Natural"}`.
-- [ ] **Preço decimal:** produto 81 → `price_brl == 599.9`; pedido 4 → `total_brl == 799.9`; pedido 1 → `total_brl == 11499.0`.
-- [ ] **Tipos no SQLite** (cada consulta devolve `0`):
+- [x] **Preço decimal:** produto 81 → `price_brl == 599.9`; pedido 4 → `total_brl == 799.9`; pedido 1 → `total_brl == 11499.0`.
+- [x] **Tipos no SQLite** (cada consulta devolve `0`):
   `SELECT COUNT(*) FROM products WHERE typeof(price_brl) <> 'real' OR typeof(stock_quantity) <> 'integer'`;
   `SELECT COUNT(*) FROM orders WHERE typeof(total_brl) <> 'real'`;
   `SELECT COUNT(*) FROM promotions WHERE typeof(is_active) <> 'integer' OR typeof(discount_percent) <> 'integer'`.
-- [ ] **Nome normalizado:** produto 139 → `"bateria acustica yamaha kit 1 studio"`; produto 98 → `"yamaha ntx1 eletrico nylon natural"`; produto 128 → `"kala ka-b baritono mogno"`. E, para todos os 65 produtos, `nome_normalizado == normalizar(name)`.
-- [ ] **Vazio → NULL:** pedido 9 → `tracking_code is None`, `estimated_delivery is None`, `notes is None`; pedido 1 → `tracking_code == "BRAB1234567BR"`, `estimated_delivery == "2025-10-25"`, `notes is None`; pedido 17 → `notes == "Pedido cancelado pelo cliente antes do processamento"`. Contagens: `tracking_code IS NULL` → `12`; `notes IS NOT NULL` → `4`; `WHERE tracking_code = '' OR notes = ''` → `0`.
-- [ ] **Promoções ativas:** `SELECT promotion_id, product_id, discount_percent FROM promotions WHERE is_active = 1 ORDER BY promotion_id` → `[(12, 127, 10), (14, 121, 20), (19, 90, 18), (24, 94, 8)]`; `SELECT DISTINCT is_active` → `{0, 1}`.
-- [ ] **Status dos produtos:** `SELECT status, COUNT(*) ... GROUP BY status` → `{"active": 62, "discontinued": 2, "coming_soon": 1}` (o `coming_soon` é o 130).
-- [ ] **Specs:** os 65 `specs` fazem `json.loads` para `dict`; produto 131 → `{"body": "Mahogany", "neck": "Mahogany", "strings": "6", "color": "Heritage Cherry Sunburst"}`.
-- [ ] **Recria do zero:** rodar `criar_banco` duas vezes no mesmo `destino` → `products` continua com `65`. E: criar antes um arquivo SQLite em `destino` com `CREATE TABLE lixo (x)`; depois de `criar_banco`, `SELECT name FROM sqlite_master WHERE name = 'lixo'` não devolve nada.
-- [ ] **Specs inválido** (parametrizado com `"{nao é json"` e `"[1, 2]"`): `copiar_csvs`, trocar o `specs` do produto 95, `criar_banco(destino, origem=pasta)` levanta `ValueError` com `"95"` na mensagem, e `destino` **não existe** depois.
-- [ ] **FK ativa:** `copiar_csvs`, trocar o `product_id` da primeira linha de `order_items.csv` (pedido 1) de `93` para `999` → `criar_banco` levanta `sqlite3.IntegrityError`, e `destino` não existe depois.
+- [x] **Nome normalizado:** produto 139 → `"bateria acustica yamaha kit 1 studio"`; produto 98 → `"yamaha ntx1 eletrico nylon natural"`; produto 128 → `"kala ka-b baritono mogno"`. E, para todos os 65 produtos, `nome_normalizado == normalizar(name)`.
+- [x] **Vazio → NULL:** pedido 9 → `tracking_code is None`, `estimated_delivery is None`, `notes is None`; pedido 1 → `tracking_code == "BRAB1234567BR"`, `estimated_delivery == "2025-10-25"`, `notes is None`; pedido 17 → `notes == "Pedido cancelado pelo cliente antes do processamento"`. Contagens: `tracking_code IS NULL` → `12`; `notes IS NOT NULL` → `4`; `WHERE tracking_code = '' OR notes = ''` → `0`.
+- [x] **Promoções ativas:** `SELECT promotion_id, product_id, discount_percent FROM promotions WHERE is_active = 1 ORDER BY promotion_id` → `[(12, 127, 10), (14, 121, 20), (19, 90, 18), (24, 94, 8)]`; `SELECT DISTINCT is_active` → `{0, 1}`.
+- [x] **Status dos produtos:** `SELECT status, COUNT(*) ... GROUP BY status` → `{"active": 62, "discontinued": 2, "coming_soon": 1}` (o `coming_soon` é o 130).
+- [x] **Specs:** os 65 `specs` fazem `json.loads` para `dict`; produto 131 → `{"body": "Mahogany", "neck": "Mahogany", "strings": "6", "color": "Heritage Cherry Sunburst"}`.
+- [x] **Recria do zero:** rodar `criar_banco` duas vezes no mesmo `destino` → `products` continua com `65`. E: criar antes um arquivo SQLite em `destino` com `CREATE TABLE lixo (x)`; depois de `criar_banco`, `SELECT name FROM sqlite_master WHERE name = 'lixo'` não devolve nada.
+- [x] **Specs inválido** (parametrizado com `"{nao é json"` e `"[1, 2]"`): `copiar_csvs`, trocar o `specs` do produto 95, `criar_banco(destino, origem=pasta)` levanta `ValueError` com `"95"` na mensagem, e `destino` **não existe** depois.
+- [x] **FK ativa:** `copiar_csvs`, trocar o `product_id` da primeira linha de `order_items.csv` (pedido 1) de `93` para `999` → `criar_banco` levanta `sqlite3.IntegrityError`, e `destino` não existe depois.
 
 ### `tests/test_politicas.py`
 Todos usam o `data/politicas.md` real (caminho padrão).
-- [ ] `carregar_secoes()` tem as chaves `1` a `10`, exatamente.
-- [ ] **Todos os tópicos** (parametrizado) — `texto_do_topico(t).startswith(titulo)`:
+- [x] `carregar_secoes()` tem as chaves `1` a `10`, exatamente.
+- [x] **Todos os tópicos** (parametrizado) — `texto_do_topico(t).startswith(titulo)`:
 
   | Tópico | Título esperado |
   | --- | --- |
@@ -198,13 +198,13 @@ Todos usam o `data/politicas.md` real (caminho padrão).
   | `promocoes` | `## 6. Promoções e Descontos` |
   | `garantia` | `## 8. Garantia` |
   | `privacidade` | `## 9. Privacidade e Proteção de Dados` |
-- [ ] **Conteúdo com subseções:** `texto_do_topico("trocas_devolucoes")` contém `"7 (sete) dias corridos após o recebimento"` e `"### 4.4 Itens Não Elegíveis para Troca"`, e **não** contém `"## 5."`.
-- [ ] **Tabela preservada:** `texto_do_topico("horarios")` contém `"| Sábado | 09:00 às 13:00 |"`.
-- [ ] **Capa fora:** `texto_do_topico("sobre_a_loja")` contém `"### 1.2 Dados da Empresa"` e `"Rua 14 de Maio, 3200"`, e **não** contém `"MANUAL DE POLÍTICAS"` nem `"<!--"`.
-- [ ] **Tópico inválido:** `texto_do_topico("cordas")` levanta `ValueError`; a mensagem contém `"cordas"` e `"frete_entregas"` (lista os válidos).
-- [ ] **Seções do prompt:** `texto_da_secao(7)` começa com `"## 7. Atendimento via WhatsApp"` e contém `"### 7.3 Situações Especiais"`; `texto_da_secao(10)` começa com `"## 10. Disposições Finais"` e contém `"consultar a gerência"`.
-- [ ] **Seção inexistente:** `texto_da_secao(11)` levanta `ValueError`.
-- [ ] `TOPICOS` tem exatamente as 8 chaves da tabela acima, e nenhum valor é `7` ou `10`.
+- [x] **Conteúdo com subseções:** `texto_do_topico("trocas_devolucoes")` contém `"7 (sete) dias corridos após o recebimento"` e `"### 4.4 Itens Não Elegíveis para Troca"`, e **não** contém `"## 5."`.
+- [x] **Tabela preservada:** `texto_do_topico("horarios")` contém `"| Sábado | 09:00 às 13:00 |"`.
+- [x] **Capa fora:** `texto_do_topico("sobre_a_loja")` contém `"### 1.2 Dados da Empresa"` e `"Rua 14 de Maio, 3200"`, e **não** contém `"MANUAL DE POLÍTICAS"` nem `"<!--"`.
+- [x] **Tópico inválido:** `texto_do_topico("cordas")` levanta `ValueError`; a mensagem contém `"cordas"` e `"frete_entregas"` (lista os válidos).
+- [x] **Seções do prompt:** `texto_da_secao(7)` começa com `"## 7. Atendimento via WhatsApp"` e contém `"### 7.3 Situações Especiais"`; `texto_da_secao(10)` começa com `"## 10. Disposições Finais"` e contém `"consultar a gerência"`.
+- [x] **Seção inexistente:** `texto_da_secao(11)` levanta `ValueError`.
+- [x] `TOPICOS` tem exatamente as 8 chaves da tabela acima, e nenhum valor é `7` ou `10`.
 
 ## 6. Plano
 1. `tests/conftest.py`, `tests/test_db.py`, `tests/test_ingest.py`; rodar `pytest` e ver os novos falhando (`test_ambiente.py` segue verde) → commit `test(ingest): ingestão CSV → SQLite e conexão somente leitura`.
@@ -214,14 +214,14 @@ Todos usam o `data/politicas.md` real (caminho padrão).
 5. `app/politicas.py` até verde; rodar a verificação manual; marcar os critérios e mudar o status para **implementada** → commit `feat(politicas): leitura das seções do manual por tópico`.
 
 ## 7. Critérios de aceite
-- [ ] [AC-01] `python -m app.ingest` cria `data/emporio.db` do zero com as 6 tabelas e o schema da §3; rodar de novo dá o mesmo resultado.
-- [ ] [AC-02] Tipos corretos no banco: preços `REAL`, estoque e ids `INTEGER`, `is_active` 0/1, vazio → `NULL`, `specs` é objeto JSON válido, `nome_normalizado` sem acento (testes da §5).
-- [ ] [AC-03] Dado inválido (specs não-objeto, FK quebrada) interrompe a ingestão com erro que identifica o problema e não deixa banco parcial.
-- [ ] [AC-04] `conectar()` abre o banco somente leitura (escrita falha) e, sem banco, orienta a rodar `python -m app.ingest`.
-- [ ] [AC-05] `texto_do_topico` devolve a seção completa (com `###`) de cada um dos 8 tópicos; tópico inválido gera `ValueError` que lista os válidos; `texto_da_secao(7)` e `texto_da_secao(10)` funcionam.
-- [ ] [AC-06] Nenhuma dependência nova (só stdlib); `data/raw/` intocado; `data/emporio.db` ignorado pelo git (`*.db`).
-- [ ] [AC-TESTES] `pytest` verde
-- [ ] [AC-LINT] `ruff check .` verde
+- [x] [AC-01] `python -m app.ingest` cria `data/emporio.db` do zero com as 6 tabelas e o schema da §3; rodar de novo dá o mesmo resultado.
+- [x] [AC-02] Tipos corretos no banco: preços `REAL`, estoque e ids `INTEGER`, `is_active` 0/1, vazio → `NULL`, `specs` é objeto JSON válido, `nome_normalizado` sem acento (testes da §5).
+- [x] [AC-03] Dado inválido (specs não-objeto, FK quebrada) interrompe a ingestão com erro que identifica o problema e não deixa banco parcial.
+- [x] [AC-04] `conectar()` abre o banco somente leitura (escrita falha) e, sem banco, orienta a rodar `python -m app.ingest`.
+- [x] [AC-05] `texto_do_topico` devolve a seção completa (com `###`) de cada um dos 8 tópicos; tópico inválido gera `ValueError` que lista os válidos; `texto_da_secao(7)` e `texto_da_secao(10)` funcionam.
+- [x] [AC-06] Nenhuma dependência nova (só stdlib); `data/raw/` intocado; `data/emporio.db` ignorado pelo git (`*.db`).
+- [x] [AC-TESTES] `pytest` verde
+- [x] [AC-LINT] `ruff check .` verde
 - **Verificação manual:**
   - `python -m app.ingest` → imprime o caminho de `data/emporio.db` e `categories: 9`, `customers: 50`, `products: 65`, `orders: 20`, `order_items: 22`, `promotions: 25`.
   - `python -c "from app.db import conectar; print(tuple(conectar().execute('SELECT name, price_brl FROM products WHERE product_id = 95').fetchone()))"` → `('Takamine GD20 Dreadnought Natural', 2199.0)`.
