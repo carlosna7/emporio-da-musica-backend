@@ -1,6 +1,6 @@
 # SPEC-0002 — Ferramentas do agente e regras de preço
 
-- **Status:** aprovada
+- **Status:** implementada
 - **PRD:** [PRD-0001](../prds/PRD-0001-agente-atendimento.md)
 - **Depende de:** SPEC-0001 (banco, `normalizar`, `conectar`, `politicas.py`). **Não** depende da SPEC-0003.
 
@@ -179,8 +179,8 @@ Comece no *red* (`ModuleNotFoundError` conta). Números conferidos nos CSVs em 2
 Toda chamada de tool nos testes passa `ctx=ctx` (omitido abaixo quando óbvio). Para outra data: `dataclasses.replace(ctx, hoje=...)`. Helper local `ids(r) = [p["id"] for p in r["produtos"]]`.
 
 ### `tests/test_precos.py` (sem banco)
-- [ ] Sem promoção (Takamine GD20): `calcular_precos(2199.0, [])` → `{"preco_promocional": None, "desconto_percent": None, "preco_pix": 2089.05}`.
-- [ ] Promoções ativas reais (parametrizado, `preco_pix is None` em todos):
+- [x] Sem promoção (Takamine GD20): `calcular_precos(2199.0, [])` → `{"preco_promocional": None, "desconto_percent": None, "preco_pix": 2089.05}`.
+- [x] Promoções ativas reais (parametrizado, `preco_pix is None` em todos):
 
   | Produto | `preco` | descontos | `preco_promocional` | `desconto_percent` |
   | --- | --- | --- | --- | --- |
@@ -188,55 +188,55 @@ Toda chamada de tool nos testes passa `ctx=ctx` (omitido abaixo quando óbvio). 
   | 121 Ohana CK-20 | 549.0 | `[20]` | 439.2 | 20 |
   | 90 Crafter HT-100 | 2399.0 | `[18]` | 1967.18 | 18 |
   | 94 Taylor 110e | 5999.0 | `[8]` | 5519.08 | 8 |
-- [ ] Maior desconto vence, sem acumular: `calcular_precos(1000.0, [10, 25, 15])` → `preco_promocional == 750.0`, `desconto_percent == 25`, `preco_pix is None`.
-- [ ] Meio centavo arredonda para cima (parametrizado, sem promoção): `599.9` → `preco_pix == 569.91`; `799.9` → `759.91`; `429.9` → `408.41`.
-- [ ] Tipos: `preco_promocional` e `preco_pix` são `float` quando não `None`; `desconto_percent` é `int`.
+- [x] Maior desconto vence, sem acumular: `calcular_precos(1000.0, [10, 25, 15])` → `preco_promocional == 750.0`, `desconto_percent == 25`, `preco_pix is None`.
+- [x] Meio centavo arredonda para cima (parametrizado, sem promoção): `599.9` → `preco_pix == 569.91`; `799.9` → `759.91`; `429.9` → `408.41`.
+- [x] Tipos: `preco_promocional` e `preco_pix` são `float` quando não `None`; `desconto_percent` é `int`.
 
 ### `tests/test_tools.py`
 **Produtos (`buscar_produtos`, `detalhes_produto`)**
-- [ ] Takamine GD20: `buscar_produtos(termo="takamine gd20", ctx=ctx)` → `total == 1` e o produto é exatamente `{"id": 95, "nome": "Takamine GD20 Dreadnought Natural", "categoria": "Violões", "preco": 2199.0, "preco_promocional": None, "desconto_percent": None, "preco_pix": 2089.05, "estoque": 5, "status": "active", "disponivel": True}` (a promoção 4 do produto 95 está inativa e não conta). Sem a chave `aviso`.
-- [ ] Acento e maiúsculas: `termo="ACÚSTICA yamaha"` → `ids == [139, 141]`.
-- [ ] `termo` só olha o nome: `termo="violão"` → `total == 0` e `"aviso"` presente (nenhum nome traz "violão"; por isso a descrição manda usar `categoria`).
-- [ ] Violões até R$ 1000 (PRD, critério 1): `categoria="Violões", preco_max=1000` → `total == 12`, `ids == [83, 85, 89, 88, 81, 84, 87, 86, 107, 82]` e `"12" in aviso`. O mesmo com `categoria="violoes"` → `total == 12`. Os 96 (estoque 0) e 113 (`discontinued`) não aparecem.
-- [ ] Promoção (produto 127): `termo="kal-700t"` → `preco == 359.0`, `preco_promocional == 323.1`, `desconto_percent == 10`, `preco_pix is None`.
-- [ ] `em_promocao=True` → `total == 4`, `ids == [127, 121, 90, 94]`.
-- [ ] Filtro pelo preço final: `categoria="Ukuleles", preco_max=440` → `ids == [119, 118, 116, 117, 127, 120, 121]` (121 entra pelo promocional 439,20); `categoria="Ukuleles", preco_min=440` → `121 not in ids`.
-- [ ] Estoque zero (produto 96): `termo="gf-3d"` → `total == 0`; com `apenas_disponiveis=False` → `estoque == 0`, `status == "active"`, `disponivel is False`, `preco_pix == 759.91`.
-- [ ] Descontinuado (113): `termo="sn-7c", apenas_disponiveis=False` → `status == "discontinued"`, `disponivel is False`. E `termo="7 cordas"` → `ids == [112, 110, 109, 111]`; com `apenas_disponiveis=False` → `ids == [113, 112, 110, 109, 111]`.
-- [ ] Sem filtros: `buscar_produtos(ctx=ctx)` → `total == 61`, `len(produtos) == 10`, `ids[0] == 119`.
-- [ ] Categorias vazias (parametrizado: `"Instrumentos de Sopro (Madeiras)"`, `"Instrumentos de Sopro (Metais)"`, `"Cordas Orquestrais"`) → `{"total": 0, "produtos": [], "aviso": "Nenhum produto encontrado com esses filtros."}`, sem `"erro"`.
-- [ ] Entrada inválida (parametrizado; cada um devolve dict com `"erro"`): `categoria="Acessórios"` (e a mensagem contém `"Violões"`); `preco_max=-1`; `preco_max="mil"`; `preco_max=True`; `preco_min=500, preco_max=100`; `apenas_disponiveis="sim"`; `termo=123`.
-- [ ] `detalhes_produto(95)` → campos da busca iguais aos do teste do Takamine, mais `descricao.startswith("Violão dreadnought Takamine")` e `specs == {"top": "Cedro Sólido", "back_sides": "Sapele", "neck": "Mogno", "strings": "steel", "scale": "650mm", "electronics": "no", "color": "Natural"}`.
-- [ ] `detalhes_produto(130)` → `status == "coming_soon"`, `estoque == 2`, `disponivel is False`. `detalhes_produto(95.0)` → `id == 95`.
-- [ ] `detalhes_produto` inválido (parametrizado): `999` → `{"erro": "Produto 999 não encontrado."}`; `"95"`, `True`, `95.5` → `"erro"` presente.
+- [x] Takamine GD20: `buscar_produtos(termo="takamine gd20", ctx=ctx)` → `total == 1` e o produto é exatamente `{"id": 95, "nome": "Takamine GD20 Dreadnought Natural", "categoria": "Violões", "preco": 2199.0, "preco_promocional": None, "desconto_percent": None, "preco_pix": 2089.05, "estoque": 5, "status": "active", "disponivel": True}` (a promoção 4 do produto 95 está inativa e não conta). Sem a chave `aviso`.
+- [x] Acento e maiúsculas: `termo="ACÚSTICA yamaha"` → `ids == [139, 141]`.
+- [x] `termo` só olha o nome: `termo="violão"` → `total == 0` e `"aviso"` presente (nenhum nome traz "violão"; por isso a descrição manda usar `categoria`).
+- [x] Violões até R$ 1000 (PRD, critério 1): `categoria="Violões", preco_max=1000` → `total == 12`, `ids == [83, 85, 89, 88, 81, 84, 87, 86, 107, 82]` e `"12" in aviso`. O mesmo com `categoria="violoes"` → `total == 12`. Os 96 (estoque 0) e 113 (`discontinued`) não aparecem.
+- [x] Promoção (produto 127): `termo="kal-700t"` → `preco == 359.0`, `preco_promocional == 323.1`, `desconto_percent == 10`, `preco_pix is None`.
+- [x] `em_promocao=True` → `total == 4`, `ids == [127, 121, 90, 94]`.
+- [x] Filtro pelo preço final: `categoria="Ukuleles", preco_max=440` → `ids == [119, 118, 116, 117, 127, 120, 121]` (121 entra pelo promocional 439,20); `categoria="Ukuleles", preco_min=440` → `121 not in ids`.
+- [x] Estoque zero (produto 96): `termo="gf-3d"` → `total == 0`; com `apenas_disponiveis=False` → `estoque == 0`, `status == "active"`, `disponivel is False`, `preco_pix == 759.91`.
+- [x] Descontinuado (113): `termo="sn-7c", apenas_disponiveis=False` → `status == "discontinued"`, `disponivel is False`. E `termo="7 cordas"` → `ids == [112, 110, 109, 111]`; com `apenas_disponiveis=False` → `ids == [113, 112, 110, 109, 111]`.
+- [x] Sem filtros: `buscar_produtos(ctx=ctx)` → `total == 61`, `len(produtos) == 10`, `ids[0] == 119`.
+- [x] Categorias vazias (parametrizado: `"Instrumentos de Sopro (Madeiras)"`, `"Instrumentos de Sopro (Metais)"`, `"Cordas Orquestrais"`) → `{"total": 0, "produtos": [], "aviso": "Nenhum produto encontrado com esses filtros."}`, sem `"erro"`.
+- [x] Entrada inválida (parametrizado; cada um devolve dict com `"erro"`): `categoria="Acessórios"` (e a mensagem contém `"Violões"`); `preco_max=-1`; `preco_max="mil"`; `preco_max=True`; `preco_min=500, preco_max=100`; `apenas_disponiveis="sim"`; `termo=123`.
+- [x] `detalhes_produto(95)` → campos da busca iguais aos do teste do Takamine, mais `descricao.startswith("Violão dreadnought Takamine")` e `specs == {"top": "Cedro Sólido", "back_sides": "Sapele", "neck": "Mogno", "strings": "steel", "scale": "650mm", "electronics": "no", "color": "Natural"}`.
+- [x] `detalhes_produto(130)` → `status == "coming_soon"`, `estoque == 2`, `disponivel is False`. `detalhes_produto(95.0)` → `id == 95`.
+- [x] `detalhes_produto` inválido (parametrizado): `999` → `{"erro": "Produto 999 não encontrado."}`; `"95"`, `True`, `95.5` → `"erro"` presente.
 
 **Pedido (`consultar_pedido`)**
-- [ ] Pedido 1 por e-mail (`"pedro.oliveira@jmail.com"`) → exatamente `{"pedido": 1, "status": "delivered", "data_pedido": "2025-10-15", "total": 11499.0, "pagamento": "pix", "codigo_rastreio": "BRAB1234567BR", "previsao_entrega": "2025-10-25", "itens": [{"nome": "Martin D-28 Dreadnought Natural", "quantidade": 1}], "observacao": None, "dias_desde_compra": 383, "dias_desde_entrega": 373}`.
-- [ ] Mesmo resultado (parametrizado) com `" Pedro.Oliveira@JMAIL.COM "`, `"67984321098"`, `"67 98432-1098"` e `"+55 (67) 98432-1098"`.
-- [ ] Dois itens, ainda não entregue: pedido 15 com `"aline.monteiro@jmail.com"` → `status == "pending"`, `total == 8348.0`, `pagamento == "credit_12x"`, `codigo_rastreio is None`, `previsao_entrega is None`, `itens == [{"nome": "Yamaha C70 Nylon Natural", "quantidade": 1}, {"nome": "Taylor 214ce Elétrico Aço Natural", "quantidade": 1}]`, `dias_desde_entrega is None`.
-- [ ] Observação: pedido 17 com `"matheus.correia@hayoo.com.br"` → `status == "cancelled"`, `observacao == "Pedido cancelado pelo cliente antes do processamento"`.
-- [ ] Arrependimento dentro do prazo: `ctx` com `hoje=date(2026, 1, 22)`, pedido 5 com `"rafael.pereira@jmail.com"` → `dias_desde_entrega == 4`, `dias_desde_compra == 17`. Pedido 8 (`shipped`) com `"anacarol.ferreira@coldmail.com"` → `dias_desde_entrega is None`.
-- [ ] E-mail repetido (D13): pedido 10 com `"bruno.martins@jmail.com"` → `pedido == 10`, `itens == [{"nome": "Music Man Bass 1X Electric Bass", "quantidade": 1}]`; com `"(67) 98543-2109"` (cliente 11) → ok; com `"(67) 99456-3456"` (cliente 43, que não tem pedidos) → `{"erro": ERRO_PEDIDO}`.
-- [ ] Mesma mensagem (parametrizado): `(1, "rafael.pereira@jmail.com")` (cliente de outro pedido), `(1, "98432-1098")` (telefone incompleto), `(999, "pedro.oliveira@jmail.com")` (pedido inexistente) → todos `== {"erro": ERRO_PEDIDO}`.
-- [ ] Nenhum resultado de sucesso tem as chaves `email`, `telefone`, `phone` ou `nome_cliente`.
-- [ ] Entrada inválida: `order_id="1"`, `order_id=True` e `email_ou_telefone="   "` → `"erro"` presente e diferente de `ERRO_PEDIDO`.
+- [x] Pedido 1 por e-mail (`"pedro.oliveira@jmail.com"`) → exatamente `{"pedido": 1, "status": "delivered", "data_pedido": "2025-10-15", "total": 11499.0, "pagamento": "pix", "codigo_rastreio": "BRAB1234567BR", "previsao_entrega": "2025-10-25", "itens": [{"nome": "Martin D-28 Dreadnought Natural", "quantidade": 1}], "observacao": None, "dias_desde_compra": 383, "dias_desde_entrega": 373}`.
+- [x] Mesmo resultado (parametrizado) com `" Pedro.Oliveira@JMAIL.COM "`, `"67984321098"`, `"67 98432-1098"` e `"+55 (67) 98432-1098"`.
+- [x] Dois itens, ainda não entregue: pedido 15 com `"aline.monteiro@jmail.com"` → `status == "pending"`, `total == 8348.0`, `pagamento == "credit_12x"`, `codigo_rastreio is None`, `previsao_entrega is None`, `itens == [{"nome": "Yamaha C70 Nylon Natural", "quantidade": 1}, {"nome": "Taylor 214ce Elétrico Aço Natural", "quantidade": 1}]`, `dias_desde_entrega is None`.
+- [x] Observação: pedido 17 com `"matheus.correia@hayoo.com.br"` → `status == "cancelled"`, `observacao == "Pedido cancelado pelo cliente antes do processamento"`.
+- [x] Arrependimento dentro do prazo: `ctx` com `hoje=date(2026, 1, 22)`, pedido 5 com `"rafael.pereira@jmail.com"` → `dias_desde_entrega == 4`, `dias_desde_compra == 17`. Pedido 8 (`shipped`) com `"anacarol.ferreira@coldmail.com"` → `dias_desde_entrega is None`.
+- [x] E-mail repetido (D13): pedido 10 com `"bruno.martins@jmail.com"` → `pedido == 10`, `itens == [{"nome": "Music Man Bass 1X Electric Bass", "quantidade": 1}]`; com `"(67) 98543-2109"` (cliente 11) → ok; com `"(67) 99456-3456"` (cliente 43, que não tem pedidos) → `{"erro": ERRO_PEDIDO}`.
+- [x] Mesma mensagem (parametrizado): `(1, "rafael.pereira@jmail.com")` (cliente de outro pedido), `(1, "98432-1098")` (telefone incompleto), `(999, "pedro.oliveira@jmail.com")` (pedido inexistente) → todos `== {"erro": ERRO_PEDIDO}`.
+- [x] Nenhum resultado de sucesso tem as chaves `email`, `telefone`, `phone` ou `nome_cliente`.
+- [x] Entrada inválida: `order_id="1"`, `order_id=True` e `email_ou_telefone="   "` → `"erro"` presente e diferente de `ERRO_PEDIDO`.
 
 **Política e encaminhamento**
-- [ ] `consultar_politica("trocas_devolucoes", ctx=ctx)` → `topico == "trocas_devolucoes"`, `texto.startswith("## 4. Política de Trocas e Devoluções")`, `"7 (sete) dias corridos" in texto`.
-- [ ] `consultar_politica("frete_entregas", ctx=ctx)["texto"]` contém `"Frete grátis para pedidos acima de R$ 500,00"`.
-- [ ] `consultar_politica("cordas", ctx=ctx)` → só a chave `"erro"`, que contém `"cordas"` e `"frete_entregas"`.
-- [ ] Encaminhamento: `encaminhar_atendente("reclamacao", "Pedido 5 chegou com o tampo trincado.", ctx=ctx)` → `== {"protocolo": "EM-20261102-0001", "prazo_retorno": "24 horas úteis", "canal_whatsapp": "(67) 3341-4444"}`; `tmp_path / "logs" / "handoffs.jsonl"` existe (a pasta foi criada) com uma linha; `json.loads` dela tem as chaves `["protocolo", "ts", "conversa_id", "motivo", "resumo", "contato"]` nessa ordem, `conversa_id == "teste"`, `motivo == "reclamacao"`, `contato is None`, e `datetime.fromisoformat(ts)` não falha.
-- [ ] Sequência: segunda chamada no mesmo `ctx` com `contato="(67) 99999-0000"` → `protocolo == "EM-20261102-0002"`, arquivo com 2 linhas, a segunda com `contato == "(67) 99999-0000"`. Com `hoje=date(2026, 11, 3)` → `"EM-20261103-0001"`. `contato="   "` → gravado como `None`.
-- [ ] Encaminhamento inválido (parametrizado): `motivo="raiva"` (a mensagem contém `"reclamacao"`), `resumo=""`, `resumo=None`, `contato=5` → `"erro"` presente e o arquivo **não existe** depois.
-- [ ] D13: o texto de `app/tools.py` não contém `"3321-4500"`.
+- [x] `consultar_politica("trocas_devolucoes", ctx=ctx)` → `topico == "trocas_devolucoes"`, `texto.startswith("## 4. Política de Trocas e Devoluções")`, `"7 (sete) dias corridos" in texto`.
+- [x] `consultar_politica("frete_entregas", ctx=ctx)["texto"]` contém `"Frete grátis para pedidos acima de R$ 500,00"`.
+- [x] `consultar_politica("cordas", ctx=ctx)` → só a chave `"erro"`, que contém `"cordas"` e `"frete_entregas"`.
+- [x] Encaminhamento: `encaminhar_atendente("reclamacao", "Pedido 5 chegou com o tampo trincado.", ctx=ctx)` → `== {"protocolo": "EM-20261102-0001", "prazo_retorno": "24 horas úteis", "canal_whatsapp": "(67) 3341-4444"}`; `tmp_path / "logs" / "handoffs.jsonl"` existe (a pasta foi criada) com uma linha; `json.loads` dela tem as chaves `["protocolo", "ts", "conversa_id", "motivo", "resumo", "contato"]` nessa ordem, `conversa_id == "teste"`, `motivo == "reclamacao"`, `contato is None`, e `datetime.fromisoformat(ts)` não falha.
+- [x] Sequência: segunda chamada no mesmo `ctx` com `contato="(67) 99999-0000"` → `protocolo == "EM-20261102-0002"`, arquivo com 2 linhas, a segunda com `contato == "(67) 99999-0000"`. Com `hoje=date(2026, 11, 3)` → `"EM-20261103-0001"`. `contato="   "` → gravado como `None`.
+- [x] Encaminhamento inválido (parametrizado): `motivo="raiva"` (a mensagem contém `"reclamacao"`), `resumo=""`, `resumo=None`, `contato=5` → `"erro"` presente e o arquivo **não existe** depois.
+- [x] D13: o texto de `app/tools.py` não contém `"3321-4500"`.
 
 **Registro `TOOLS`**
-- [ ] `list(TOOLS) == ["buscar_produtos", "detalhes_produto", "consultar_pedido", "consultar_politica", "encaminhar_atendente"]` (frete não é tool).
-- [ ] Para cada ferramenta: `descricao` não vazia; `parametros["type"] == "object"`; as chaves de `parametros["properties"]` são exatamente os parâmetros da função sem `ctx` (via `inspect.signature`), e `parametros["required"]` são exatamente os que não têm padrão; toda property tem `type` e `description`; nenhuma property se chama `ctx`, `conexao`, `hoje`, `conversa_id` ou `pasta_logs`.
-- [ ] Enums: `categoria` == `list(CATEGORIAS)`; `topico` == `list(TOPICOS)`; `motivo` == `list(MOTIVOS)`. E `CATEGORIAS == tuple(r["name"] for r in conexao.execute("SELECT name FROM categories ORDER BY category_id"))`.
-- [ ] `ctx` é keyword-only em todas: `inspect.signature(f).parameters["ctx"].kind == KEYWORD_ONLY`.
-- [ ] Independência: o texto de `app/tools.py` não contém `"app.llm"`.
-- [ ] Serializável: `json.dumps` funciona no retorno de uma chamada feliz de cada tool.
+- [x] `list(TOOLS) == ["buscar_produtos", "detalhes_produto", "consultar_pedido", "consultar_politica", "encaminhar_atendente"]` (frete não é tool).
+- [x] Para cada ferramenta: `descricao` não vazia; `parametros["type"] == "object"`; as chaves de `parametros["properties"]` são exatamente os parâmetros da função sem `ctx` (via `inspect.signature`), e `parametros["required"]` são exatamente os que não têm padrão; toda property tem `type` e `description`; nenhuma property se chama `ctx`, `conexao`, `hoje`, `conversa_id` ou `pasta_logs`.
+- [x] Enums: `categoria` == `list(CATEGORIAS)`; `topico` == `list(TOPICOS)`; `motivo` == `list(MOTIVOS)`. E `CATEGORIAS == tuple(r["name"] for r in conexao.execute("SELECT name FROM categories ORDER BY category_id"))`.
+- [x] `ctx` é keyword-only em todas: `inspect.signature(f).parameters["ctx"].kind == KEYWORD_ONLY`.
+- [x] Independência: o texto de `app/tools.py` não contém `"app.llm"`.
+- [x] Serializável: `json.dumps` funciona no retorno de uma chamada feliz de cada tool.
 
 ## 6. Plano
 Cada par `test` → `feat` roda `pytest` (com `--basetemp` se o temp do sistema der `PermissionError`) e `ruff check .`.
@@ -252,15 +252,15 @@ Cada par `test` → `feat` roda `pytest` (com `--basetemp` se o temp do sistema 
 10. `Ferramenta` e `TOOLS` com os textos da §3.6; verificação manual; marcar critérios; status **implementada** → `feat(tools): registro das ferramentas`.
 
 ## 7. Critérios de aceite
-- [ ] [AC-01] `calcular_precos` aplica só o maior desconto ativo, não dá PIX sobre promoção, dá 5% de PIX sem promoção e arredonda meio centavo para cima.
-- [ ] [AC-02] `buscar_produtos` filtra por termo (palavras no nome normalizado), categoria (normalizada, com enum), disponibilidade, promoção e faixa de preço final; ordena por preço; devolve no máximo 10 com `total` e `aviso`; categoria vazia dá `total` 0 sem erro.
-- [ ] [AC-03] `detalhes_produto` devolve os mesmos campos de preço da busca, mais `descricao` e `specs` como dict.
-- [ ] [AC-04] `consultar_pedido` só responde com número do pedido + e-mail ou telefone do cliente daquele pedido; inexistente e não conferido devolvem o mesmo `ERRO_PEDIDO`; não expõe dados do cliente; traz `dias_desde_compra` e `dias_desde_entrega` calculados com `ctx.hoje`.
-- [ ] [AC-05] `consultar_politica` devolve a seção do tópico; tópico inválido vira `{"erro"}`.
-- [ ] [AC-06] `encaminhar_atendente` grava uma linha JSON em `<pasta_logs>/handoffs.jsonl`, gera `EM-AAAAMMDD-XXXX` sequencial por dia e devolve prazo e WhatsApp (67) 3341-4444.
-- [ ] [AC-07] Nenhuma tool lança exceção por entrada inválida; `ctx` não aparece em nenhum JSON Schema; `TOOLS` tem as 5 tools com descrição e schema coerentes com a assinatura; `app/tools.py` não importa `app.llm`; sem dependências novas.
-- [ ] [AC-TESTES] `pytest` verde
-- [ ] [AC-LINT] `ruff check .` verde
+- [x] [AC-01] `calcular_precos` aplica só o maior desconto ativo, não dá PIX sobre promoção, dá 5% de PIX sem promoção e arredonda meio centavo para cima.
+- [x] [AC-02] `buscar_produtos` filtra por termo (palavras no nome normalizado), categoria (normalizada, com enum), disponibilidade, promoção e faixa de preço final; ordena por preço; devolve no máximo 10 com `total` e `aviso`; categoria vazia dá `total` 0 sem erro.
+- [x] [AC-03] `detalhes_produto` devolve os mesmos campos de preço da busca, mais `descricao` e `specs` como dict.
+- [x] [AC-04] `consultar_pedido` só responde com número do pedido + e-mail ou telefone do cliente daquele pedido; inexistente e não conferido devolvem o mesmo `ERRO_PEDIDO`; não expõe dados do cliente; traz `dias_desde_compra` e `dias_desde_entrega` calculados com `ctx.hoje`.
+- [x] [AC-05] `consultar_politica` devolve a seção do tópico; tópico inválido vira `{"erro"}`.
+- [x] [AC-06] `encaminhar_atendente` grava uma linha JSON em `<pasta_logs>/handoffs.jsonl`, gera `EM-AAAAMMDD-XXXX` sequencial por dia e devolve prazo e WhatsApp (67) 3341-4444.
+- [x] [AC-07] Nenhuma tool lança exceção por entrada inválida; `ctx` não aparece em nenhum JSON Schema; `TOOLS` tem as 5 tools com descrição e schema coerentes com a assinatura; `app/tools.py` não importa `app.llm`; sem dependências novas.
+- [x] [AC-TESTES] `pytest` verde
+- [x] [AC-LINT] `ruff check .` verde
 - **Verificação manual** (depois de `python -m app.ingest`), com o prefixo
   `from datetime import date; from app.db import conectar; from app.tools import *; c = Contexto(conectar(), date(2026, 11, 2), "manual")`:
   - `print(buscar_produtos(termo="takamine gd20", ctx=c))` → `total: 1`, `preco_pix: 2089.05`.
