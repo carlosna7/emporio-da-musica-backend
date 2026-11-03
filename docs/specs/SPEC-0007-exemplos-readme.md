@@ -1,6 +1,6 @@
 # SPEC-0007 — Conversas de exemplo e README final
 
-- **Status:** aprovada
+- **Status:** implementada
 - **PRD:** [PRD-0001](../prds/PRD-0001-agente-atendimento.md)
 - **Depende de:** SPEC-0006 (os números da avaliação que o README cita). Reutiliza `criar_agente` e `Resposta` (SPEC-0004), `criar_cliente`, `LLMError`, `ToolCall` e `Usage` (SPEC-0003), `abrir_banco`, `configurar_utf8` e `formatar_custo` (SPEC-0005), `situacao_loja` e `DIAS_SEMANA` (`app/horario.py`).
 
@@ -222,14 +222,14 @@ def linhas(arquivo) -> list[dict]:   # json.loads de cada linha ([] se não exis
 ```
 
 **Roteiros (`ROTEIROS` real)**
-- [ ] `3 <= len(ROTEIROS) <= 5`; os nomes são únicos, casam com `r"\d{2}-[a-z0-9-]+"` e são numerados em sequência a partir de `01` (`[r.nome[:2] for r in ROTEIROS] == ["01", "02", …]`).
-- [ ] Todo roteiro tem `titulo` e `descricao` não vazios e pelo menos 2 mensagens (todos mostram memória); toda mensagem é não vazia depois de `strip()`, não tem `"\n"` e tem no máximo `Config().max_message_chars` caracteres (nenhuma é recusada sem chamar o LLM).
-- [ ] Horário coberto: pelo menos um roteiro com `situacao_loja(r.agora)` começando em `"A loja está fechada"` e um com `"A loja está aberta"`.
+- [x] `3 <= len(ROTEIROS) <= 5`; os nomes são únicos, casam com `r"\d{2}-[a-z0-9-]+"` e são numerados em sequência a partir de `01` (`[r.nome[:2] for r in ROTEIROS] == ["01", "02", …]`).
+- [x] Todo roteiro tem `titulo` e `descricao` não vazios e pelo menos 2 mensagens (todos mostram memória); toda mensagem é não vazia depois de `strip()`, não tem `"\n"` e tem no máximo `Config().max_message_chars` caracteres (nenhuma é recusada sem chamar o LLM).
+- [x] Horário coberto: pelo menos um roteiro com `situacao_loja(r.agora)` começando em `"A loja está fechada"` e um com `"A loja está aberta"`.
 
 **Formatação**
-- [ ] `formatar_chamada(ToolCall("c1", "buscar_produtos", {"categoria": "Violões", "preco_max": 1000, "em_promocao": True})) == 'buscar_produtos(categoria="Violões", preco_max=1000, em_promocao=true)'`; `formatar_chamada(ToolCall("c2", "detalhes_produto", {})) == "detalhes_produto()"`.
-- [ ] `citar("Custa R$ 2.199,00.\n\nNo PIX:\n- R$ 2.089,05\n") == "> Custa R$ 2.199,00.\n>\n> No PIX:\n> - R$ 2.089,05"`; `citar("") == ">"`.
-- [ ] `montar_markdown` exato: com `roteiro()`, `CFG_LUNA`, `quando=datetime(2026, 11, 3, 18, 5)` e os turnos `TurnoExemplo("Quanto custa o Takamine GD20?", "Custa R$ 2.199,00.\n\nNo PIX, R$ 2.089,05.", [ToolCall("c1", "buscar_produtos", {"termo": "takamine gd20"})], "ok", Usage(1000, 100, 800), 0.0001)` e `TurnoExemplo("E no PIX?", "R$ 2.089,05.", [], "ok", Usage(1200, 50, 1000), 0.00005)`, o resultado é **igual** a:
+- [x] `formatar_chamada(ToolCall("c1", "buscar_produtos", {"categoria": "Violões", "preco_max": 1000, "em_promocao": True})) == 'buscar_produtos(categoria="Violões", preco_max=1000, em_promocao=true)'`; `formatar_chamada(ToolCall("c2", "detalhes_produto", {})) == "detalhes_produto()"`.
+- [x] `citar("Custa R$ 2.199,00.\n\nNo PIX:\n- R$ 2.089,05\n") == "> Custa R$ 2.199,00.\n>\n> No PIX:\n> - R$ 2.089,05"`; `citar("") == ">"`.
+- [x] `montar_markdown` exato: com `roteiro()`, `CFG_LUNA`, `quando=datetime(2026, 11, 3, 18, 5)` e os turnos `TurnoExemplo("Quanto custa o Takamine GD20?", "Custa R$ 2.199,00.\n\nNo PIX, R$ 2.089,05.", [ToolCall("c1", "buscar_produtos", {"termo": "takamine gd20"})], "ok", Usage(1000, 100, 800), 0.0001)` e `TurnoExemplo("E no PIX?", "R$ 2.089,05.", [], "ok", Usage(1200, 50, 1000), 0.00005)`, o resultado é **igual** a:
   ````text
   # Preço e PIX
 
@@ -261,30 +261,30 @@ def linhas(arquivo) -> list[dict]:   # json.loads de cada linha ([] se não exis
   Ferramentas: nenhuma
   ````
   (com `\n` no final).
-- [ ] Variações: duas chamadas no mesmo turno → `` "Ferramentas: `consultar_pedido(order_id=5, email_ou_telefone=\"a@b.com\")`, `consultar_politica(topico=\"trocas_devolucoes\")`" ``; turno com status `"erro_llm"` e sem chamadas → `"Ferramentas: nenhuma · status: `erro_llm`"`; um turno com `custo_usd=None` → `"custo estimado n/d"`; `Config(reasoning_effort=None)` → `"esforço none"`; `agora=datetime(2026, 11, 8, 15, 0)` → `"domingo, 08/11/2026, 15:00 (horário de Campo Grande/MS). A loja está fechada agora. A equipe volta amanhã, segunda-feira (09/11), às 9h."`.
+- [x] Variações: duas chamadas no mesmo turno → `` "Ferramentas: `consultar_pedido(order_id=5, email_ou_telefone=\"a@b.com\")`, `consultar_politica(topico=\"trocas_devolucoes\")`" ``; turno com status `"erro_llm"` e sem chamadas → `"Ferramentas: nenhuma · status: `erro_llm`"`; um turno com `custo_usd=None` → `"custo estimado n/d"`; `Config(reasoning_effort=None)` → `"esforço none"`; `agora=datetime(2026, 11, 8, 15, 0)` → `"domingo, 08/11/2026, 15:00 (horário de Campo Grande/MS). A loja está fechada agora. A equipe volta amanhã, segunda-feira (09/11), às 9h."`.
 
 **`gerar_conversa` (sem rede)**
-- [ ] Memória e chamadas: roteiro padrão, `llm = FakeLLM([resposta_tool("buscar_produtos", termo="takamine gd20"), resposta_texto("Custa R$ 2.199,00."), resposta_texto("No PIX, R$ 2.089,05.")])`, `pasta_logs=tmp_path / "logs"` → 2 turnos; `turnos[0].chamadas == [ToolCall("call_buscar_produtos", "buscar_produtos", {"termo": "takamine gd20"})]`; `turnos[1].chamadas == []`; `turnos[0].usage == Usage(20, 10)` (duas chamadas no turno); `turnos[0].custo_usd is None` (modelo `fake` sem preço); `turnos[1].texto == "No PIX, R$ 2.089,05."`; `llm.chamadas[2]["messages"] == [Message("user", "Quanto custa o Takamine GD20?"), Message("assistant", "Custa R$ 2.199,00."), Message("user", "E no PIX?")]`.
-- [ ] `agora` do roteiro chega ao prompt e às tools: `roteiro(mensagens=("quero falar com alguém", "ok"), agora=datetime(2026, 11, 8, 15, 0))`, roteiro do LLM `[resposta_tool("encaminhar_atendente", motivo="pedido_do_cliente", resumo="quer falar com uma pessoa"), resposta_texto("Protocolo gerado."), resposta_texto("De nada!")]` → `"domingo, 08/11/2026 (2026-11-08), 15:00" in llm.chamadas[0]["system"]`; `linhas(tmp_path / "logs" / "handoffs.jsonl")` tem 1 linha com `protocolo` começando em `"EM-20261108-"` e `conversa_id == "exemplo-01-teste"`.
-- [ ] Logs na pasta indicada: no cenário do teste "Memória e chamadas", `linhas(tmp_path / "logs" / "llm_calls.jsonl")` tem 3 linhas, todas com `conversa_id == "exemplo-01-teste"`, e `turno` `[1, 1, 2]`.
-- [ ] Erro do provedor não interrompe: `FakeLLM([])` → 2 turnos, os dois com `status == "erro_llm"`.
+- [x] Memória e chamadas: roteiro padrão, `llm = FakeLLM([resposta_tool("buscar_produtos", termo="takamine gd20"), resposta_texto("Custa R$ 2.199,00."), resposta_texto("No PIX, R$ 2.089,05.")])`, `pasta_logs=tmp_path / "logs"` → 2 turnos; `turnos[0].chamadas == [ToolCall("call_buscar_produtos", "buscar_produtos", {"termo": "takamine gd20"})]`; `turnos[1].chamadas == []`; `turnos[0].usage == Usage(20, 10)` (duas chamadas no turno); `turnos[0].custo_usd is None` (modelo `fake` sem preço); `turnos[1].texto == "No PIX, R$ 2.089,05."`; `llm.chamadas[2]["messages"] == [Message("user", "Quanto custa o Takamine GD20?"), Message("assistant", "Custa R$ 2.199,00."), Message("user", "E no PIX?")]`.
+- [x] `agora` do roteiro chega ao prompt e às tools: `roteiro(mensagens=("quero falar com alguém", "ok"), agora=datetime(2026, 11, 8, 15, 0))`, roteiro do LLM `[resposta_tool("encaminhar_atendente", motivo="pedido_do_cliente", resumo="quer falar com uma pessoa"), resposta_texto("Protocolo gerado."), resposta_texto("De nada!")]` → `"domingo, 08/11/2026 (2026-11-08), 15:00" in llm.chamadas[0]["system"]`; `linhas(tmp_path / "logs" / "handoffs.jsonl")` tem 1 linha com `protocolo` começando em `"EM-20261108-"` e `conversa_id == "exemplo-01-teste"`.
+- [x] Logs na pasta indicada: no cenário do teste "Memória e chamadas", `linhas(tmp_path / "logs" / "llm_calls.jsonl")` tem 3 linhas, todas com `conversa_id == "exemplo-01-teste"`, e `turno` `[1, 1, 2]`.
+- [x] Erro do provedor não interrompe: `FakeLLM([])` → 2 turnos, os dois com `status == "erro_llm"`.
 
 **`gerar_exemplos`**
-- [ ] Grava e sobrescreve: `pasta = tmp_path / "ex"`, com `pasta / "01-a.md"` já contendo `"velho"`; roteiros `[roteiro("01-a", ("oi", "tchau")), roteiro("02-b", ("oi", "tchau"))]`, `FakeLLM([resposta_texto("Olá!")] * 4)`, `saida = []`, `escrever=saida.append` → devolve `[pasta / "01-a.md", pasta / "02-b.md"]`; os dois começam com `"# Preço e PIX\n"`; `"velho"` não está mais em `01-a.md`; `saida == ["[1/2] 01-a: 2 turnos · custo estimado n/d", "[2/2] 02-b: 2 turnos · custo estimado n/d", "Total: 4 turnos · custo estimado n/d"]`.
-- [ ] Aviso de status: um roteiro de 2 mensagens com `FakeLLM([resposta_texto("Olá!")])` (o 2º turno vira `erro_llm`) → o arquivo é gravado, contém `"status: `erro_llm`"`, e `saida[0]` termina em `" · ATENÇÃO: turno(s) 2 sem status ok"`.
-- [ ] Custo somado com preço conhecido: `config=Config(provider="openai", model="gpt-5.4-mini")`, um roteiro de 2 mensagens e `FakeLLM([resposta_texto("a"), resposta_texto("b")])` → `saida[0] == "[1/1] 01-teste: 2 turnos · custo estimado US$ 0.000060"` e o arquivo contém `"custo estimado US$ 0.000060"`.
+- [x] Grava e sobrescreve: `pasta = tmp_path / "ex"`, com `pasta / "01-a.md"` já contendo `"velho"`; roteiros `[roteiro("01-a", ("oi", "tchau")), roteiro("02-b", ("oi", "tchau"))]`, `FakeLLM([resposta_texto("Olá!")] * 4)`, `saida = []`, `escrever=saida.append` → devolve `[pasta / "01-a.md", pasta / "02-b.md"]`; os dois começam com `"# Preço e PIX\n"`; `"velho"` não está mais em `01-a.md`; `saida == ["[1/2] 01-a: 2 turnos · custo estimado n/d", "[2/2] 02-b: 2 turnos · custo estimado n/d", "Total: 4 turnos · custo estimado n/d"]`.
+- [x] Aviso de status: um roteiro de 2 mensagens com `FakeLLM([resposta_texto("Olá!")])` (o 2º turno vira `erro_llm`) → o arquivo é gravado, contém `"status: `erro_llm`"`, e `saida[0]` termina em `" · ATENÇÃO: turno(s) 2 sem status ok"`.
+- [x] Custo somado com preço conhecido: `config=Config(provider="openai", model="gpt-5.4-mini")`, um roteiro de 2 mensagens e `FakeLLM([resposta_texto("a"), resposta_texto("b")])` → `saida[0] == "[1/1] 01-teste: 2 turnos · custo estimado US$ 0.000060"` e o arquivo contém `"custo estimado US$ 0.000060"`.
 
 **`main`**
-- [ ] Ponta a ponta (sem rede): `monkeypatch` de `evals.exemplos.carregar_config` (→ `CFG`), `evals.exemplos.criar_cliente` (guarda os argumentos e devolve `FakeLLM([resposta_texto("Aqui é o Emilio.")] * total)`, com `total = sum(len(r.mensagens) for r in ROTEIROS)`), `evals.exemplos.CAMINHO_BANCO` (→ `banco`), `evals.exemplos.PASTA_EXEMPLOS` (→ `tmp_path / "ex"`) e `evals.exemplos.PASTA_LOGS_EXEMPLOS` (→ `tmp_path / "logs"`). `main([])` → `criar_cliente` recebeu `("fake", "fake")`; os arquivos de `tmp_path / "ex"` são exatamente `{f"{r.nome}.md" for r in ROTEIROS}`; os `conversa_id` de `tmp_path / "logs" / "llm_calls.jsonl"` são exatamente `{f"exemplo-{r.nome}" for r in ROTEIROS}`; `capsys.readouterr().out` contém `"Total: "` e `f"[{len(ROTEIROS)}/{len(ROTEIROS)}]"`.
-- [ ] Erro de inicialização (parametrizado: `criar_cliente` levanta `LLMError("defina OPENAI_API_KEY no .env")`; `carregar_config` levanta `ValueError("LLM_REASONING_EFFORT: valores válidos: none, low, medium, high")`) → `SystemExit` com `code == 1`; o stderr contém `"Não consegui gerar os exemplos"` e a mensagem, e não contém `"Traceback"`; `tmp_path / "ex"` não existe ou está vazia.
-- [ ] `subprocess.run([sys.executable, "-m", "evals.exemplos", "--help"], cwd=<raiz do repo>, capture_output=True, text=True, encoding="utf-8")` → `returncode == 0` e `"examples/"` no stdout.
-- [ ] Isolamento: `subprocess.run([sys.executable, "-c", "import sys, evals.exemplos; assert not any(m in sys.modules for m in ('openai', 'anthropic', 'google.genai'))"], cwd=<raiz do repo>, check=True)`.
+- [x] Ponta a ponta (sem rede): `monkeypatch` de `evals.exemplos.carregar_config` (→ `CFG`), `evals.exemplos.criar_cliente` (guarda os argumentos e devolve `FakeLLM([resposta_texto("Aqui é o Emilio.")] * total)`, com `total = sum(len(r.mensagens) for r in ROTEIROS)`), `evals.exemplos.CAMINHO_BANCO` (→ `banco`), `evals.exemplos.PASTA_EXEMPLOS` (→ `tmp_path / "ex"`) e `evals.exemplos.PASTA_LOGS_EXEMPLOS` (→ `tmp_path / "logs"`). `main([])` → `criar_cliente` recebeu `("fake", "fake")`; os arquivos de `tmp_path / "ex"` são exatamente `{f"{r.nome}.md" for r in ROTEIROS}`; os `conversa_id` de `tmp_path / "logs" / "llm_calls.jsonl"` são exatamente `{f"exemplo-{r.nome}" for r in ROTEIROS}`; `capsys.readouterr().out` contém `"Total: "` e `f"[{len(ROTEIROS)}/{len(ROTEIROS)}]"`.
+- [x] Erro de inicialização (parametrizado: `criar_cliente` levanta `LLMError("defina OPENAI_API_KEY no .env")`; `carregar_config` levanta `ValueError("LLM_REASONING_EFFORT: valores válidos: none, low, medium, high")`) → `SystemExit` com `code == 1`; o stderr contém `"Não consegui gerar os exemplos"` e a mensagem, e não contém `"Traceback"`; `tmp_path / "ex"` não existe ou está vazia.
+- [x] `subprocess.run([sys.executable, "-m", "evals.exemplos", "--help"], cwd=<raiz do repo>, capture_output=True, text=True, encoding="utf-8")` → `returncode == 0` e `"examples/"` no stdout.
+- [x] Isolamento: `subprocess.run([sys.executable, "-c", "import sys, evals.exemplos; assert not any(m in sys.modules for m in ('openai', 'anthropic', 'google.genai'))"], cwd=<raiz do repo>, check=True)`.
 
 ### `tests/test_readme.py`
 Por que testar um README: o teste não confere texto, só a estrutura que o desafio cobra e os links. Link quebrado (um relatório renomeado, um exemplo regenerado com outro nome) é o erro mais provável num README que aponta para dezenas de arquivos, e é barato de pegar. Três testes, sem rede:
-- [ ] Seções obrigatórias: cada um destes títulos aparece como linha inteira no `README.md`: `## Em resumo`, `## Como rodar`, `## Conversas de exemplo`, `## Arquitetura`, `## Decisões técnicas`, `## Resultados da avaliação`, `## Suposições`, `## Limitações conhecidas`, `## Uso de IA`, `## O que ficaria para depois`, `## Documentação`. E `"Em construção"` não aparece.
-- [ ] Links relativos existem: para cada alvo de `re.findall(r"\]\(([^)\s]+)\)", texto)` que não começa com `http://`, `https://`, `mailto:` nem `#`, o caminho sem a âncora (`alvo.split("#")[0]`) existe a partir da raiz do repositório.
-- [ ] Todos os exemplos estão no README: os arquivos `examples/*.md` são de 3 a 5 e cada um aparece como alvo de link (`examples/<nome>.md`).
+- [x] Seções obrigatórias: cada um destes títulos aparece como linha inteira no `README.md`: `## Em resumo`, `## Como rodar`, `## Conversas de exemplo`, `## Arquitetura`, `## Decisões técnicas`, `## Resultados da avaliação`, `## Suposições`, `## Limitações conhecidas`, `## Uso de IA`, `## O que ficaria para depois`, `## Documentação`. E `"Em construção"` não aparece.
+- [x] Links relativos existem: para cada alvo de `re.findall(r"\]\(([^)\s]+)\)", texto)` que não começa com `http://`, `https://`, `mailto:` nem `#`, o caminho sem a âncora (`alvo.split("#")[0]`) existe a partir da raiz do repositório.
+- [x] Todos os exemplos estão no README: os arquivos `examples/*.md` são de 3 a 5 e cada um aparece como alvo de link (`examples/<nome>.md`).
 
 **Fixtures/mocks:** `conexao` e `banco` do `conftest.py`, `tmp_path`, `FakeLLM`, `monkeypatch`, `capsys`. `<raiz do repo>` = `Path(__file__).resolve().parents[1]`.
 
@@ -298,16 +298,17 @@ Commits seguindo o ciclo da spec (AGENTS.md, D16; escopo `evals` para o script).
 6. README final (§3.4) até ficar verde; marcar os critérios da §7; status **implementada** → `docs(readme): README final com como rodar, decisões, resultados, limitações e uso de IA`.
 
 ## 7. Critérios de aceite
-- [ ] [AC-01] `python -m evals.exemplos` gera os 5 arquivos da §3.2 em `examples/`, um agente por conversa com o `agora` do roteiro, `conversa_id` `exemplo-<nome>` e logs e encaminhamentos em `evals/logs/exemplos/` (nada novo em `logs/` nem em `evals/logs/llm_calls.jsonl`).
-- [ ] [AC-02] Cada arquivo segue o formato da §3.3: título, descrição, data simulada com a situação da loja, modelo e esforço, tokens e custo estimado (`n/d` sem preço), data de geração e, por turno, a mensagem do cliente, a resposta do Emilio citada e as ferramentas com os argumentos (ou `nenhuma`), com o status marcado quando não for `ok`.
-- [ ] [AC-03] A memória funciona como na CLI: cada turno recebe o histórico anterior (`para_historico`).
-- [ ] [AC-04] Erro de configuração sai com código 1 e `ERRO_INICIO`, sem traceback; turno sem status `ok` gera aviso no terminal; importar `evals.exemplos` não carrega SDK de provedor; nenhuma dependência nova; nenhum teste usa a rede.
-- [ ] [AC-05] `examples/` versionada com as 5 conversas geradas pelo modelo padrão, sem edição manual, revisadas pelo autor contra a tabela da §3.2; juntas, cobrem os critérios de sucesso 1 a 6 do PRD.
-- [ ] [AC-06] README com as seções da §3.4, na ordem; números iguais aos da D05, D09 e D14 e dos relatórios; decisões resumidas com link para o DECISIONS; nenhum link relativo quebrado; todos os exemplos linkados.
-- [ ] [AC-07] "Limitações conhecidas" com os itens 1 a 7 da §3.4 e o que a revisão dos exemplos encontrar.
-- [ ] [AC-08] ARCHITECTURE atualizado (§8) e `scripts/` removida.
-- [ ] [AC-TESTES] `pytest` verde, sem rede.
-- [ ] [AC-LINT] `ruff check .` verde.
+- [x] [AC-01] `python -m evals.exemplos` gera os 5 arquivos da §3.2 em `examples/`, um agente por conversa com o `agora` do roteiro, `conversa_id` `exemplo-<nome>` e logs e encaminhamentos em `evals/logs/exemplos/` (nada novo em `logs/` nem em `evals/logs/llm_calls.jsonl`).
+- [x] [AC-02] Cada arquivo segue o formato da §3.3: título, descrição, data simulada com a situação da loja, modelo e esforço, tokens e custo estimado (`n/d` sem preço), data de geração e, por turno, a mensagem do cliente, a resposta do Emilio citada e as ferramentas com os argumentos (ou `nenhuma`), com o status marcado quando não for `ok`.
+- [x] [AC-03] A memória funciona como na CLI: cada turno recebe o histórico anterior (`para_historico`).
+- [x] [AC-04] Erro de configuração sai com código 1 e `ERRO_INICIO`, sem traceback; turno sem status `ok` gera aviso no terminal; importar `evals.exemplos` não carrega SDK de provedor; nenhuma dependência nova; nenhum teste usa a rede.
+- [x] [AC-05] `examples/` versionada com as 5 conversas geradas pelo modelo padrão, sem edição manual, revisadas pelo autor contra a tabela da §3.2; juntas, cobrem os critérios de sucesso 1 a 6 do PRD.
+- [x] [AC-06] README com as seções da §3.4, na ordem; números iguais aos da D05, D09 e D14 e dos relatórios; decisões resumidas com link para o DECISIONS; nenhum link relativo quebrado; todos os exemplos linkados.
+- [x] [AC-07] "Limitações conhecidas" com os itens 1 a 7 da §3.4 e o que a revisão dos exemplos encontrar.
+- [x] [AC-08] ARCHITECTURE atualizado (§8) e `scripts/` removida.
+- [x] [AC-TESTES] `pytest` verde, sem rede.
+- [x] [AC-LINT] `ruff check .` verde.
+- **Evidências da implementação (03/11/2026):** testes escritos antes do gerador (red por módulo ausente) e antes do README (red por seções e exemplos ausentes). A geração real foi executada uma única vez com `openai`, `gpt-6-luna`, esforço `medium`, sem edição do `.env` ou das respostas: 5 arquivos, 16 turnos com status `ok`, 29 chamadas ao LLM, custo estimado total US$ 0,003776; logs isolados e ignorados pelo Git. Na revisão assistida, o exemplo 02 informa “há 4 dias”, sem explicitar 18/01/2026, e pede desculpa por ambiguidade inexistente; observações preservadas e documentadas no README. O autor aprovou a entrega após a revisão assistida e solicitou o commit de finalização, encerrando o AC-05. A visualização do Markdown e a reprodução em clone limpo não foram executadas nesta sessão.
 - **Verificação manual (autor, API real, ~US$ 0,003):** com a chave no `.env` e o modelo padrão:
   1. `python -m evals.exemplos` → 5 linhas `[i/5] …` sem `ATENÇÃO` e `Total: 16 turnos · custo estimado US$ 0.00…`.
   2. Ler os 5 arquivos contra a tabela da §3.2 (ferramentas e fatos de cada turno).
