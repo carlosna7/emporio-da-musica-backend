@@ -34,7 +34,7 @@ emporio-da-musica-backend/   # raiz do repositório
     db.py                   # conexão somente leitura + normalizar()
     precos.py               # regras de preço (promo, PIX)
     politicas.py            # carrega politicas.md e mapeia tópicos
-    tools.py                # funções das tools + ToolSpec de cada uma
+    tools.py                # funções, Contexto e registro TOOLS; SPEC-0004 converte em ToolSpec
     prompts.py              # system prompt (persona Emilio)
     agent.py                # loop ReAct
     uso.py                  # registro de chamadas e custo estimado
@@ -98,29 +98,31 @@ def criar_cliente(provider: str, model: str) -> LLMClient: ...   # fábrica lida
 class Resposta:  texto: str; tools_usadas: list[str]; usage: Usage; iteracoes: int
 
 class Agente:
-    def __init__(self, llm: LLMClient, tools: dict[str, Callable], specs: list[ToolSpec], system: str): ...
+    def __init__(self, llm: LLMClient, tools: dict[str, Ferramenta], ctx: Contexto, system: str): ...
     def responder(self, historico: list[Message], mensagem: str, conversa_id: str) -> Resposta: ...
 ```
+
+O agente converte o registro `TOOLS` em `ToolSpec` e chama cada função com `ctx=ctx`.
 
 Loop: envia `system + histórico[-HISTORY_WINDOW:] + mensagem` → se houver `tool_calls`, executa cada uma, anexa a resposta do assistente com `raw=resp.raw`, anexa os resultados como `role="tool"` e repete → se vier texto, retorna. Se passar de `MAX_TOOL_ITERATIONS`, devolve uma mensagem de fallback oferecendo atendente. Erro dentro de uma tool vira resultado `{"erro": "..."}` para o modelo, e o loop não quebra. Cada chamada ao LLM é registrada (§9).
 
 ## 6. Tools (`app/tools.py`)
 
-Todas devolvem `dict`/`list` serializável em JSON. Argumentos inválidos → `{"erro": "..."}`.
+Todas devolvem `dict` serializável em JSON e recebem `ctx: Contexto` obrigatório por palavra-chave. Argumentos inválidos → `{"erro": "..."}`. `Contexto` injeta conexão, data, ID da conversa e pasta de logs; `TOOLS` associa nome a função, descrição e JSON Schema. A SPEC-0004 converte o registro em `ToolSpec`.
 
 | Tool | Assinatura | Retorno (resumo) |
 | --- | --- | --- |
-| `buscar_produtos` | `(termo: str = None, categoria: str = None, preco_min: float = None, preco_max: float = None, apenas_disponiveis: bool = True, em_promocao: bool = False)` | até 10 × `{id, nome, categoria, preco, preco_promocional, desconto_percent, preco_pix, estoque, status, disponivel}` |
+| `buscar_produtos` | `(termo: str = None, categoria: str = None, preco_min: float = None, preco_max: float = None, apenas_disponiveis: bool = True, em_promocao: bool = False)` | `{total, produtos: [até 10 × {id, nome, categoria, preco, preco_promocional, desconto_percent, preco_pix, estoque, status, disponivel}], aviso?}` |
 | `detalhes_produto` | `(product_id: int)` | campos acima + `descricao`, `specs` (dict) |
-| `consultar_pedido` | `(order_id: int, email_ou_telefone: str)` | `{pedido, status, data_pedido, total, pagamento, codigo_rastreio, previsao_entrega, itens: [{nome, quantidade}], observacao}` ou `{erro}` genérico |
+| `consultar_pedido` | `(order_id: int, email_ou_telefone: str)` | `{pedido, status, data_pedido, total, pagamento, codigo_rastreio, previsao_entrega, itens: [{nome, quantidade}], observacao, dias_desde_compra, dias_desde_entrega}` ou `{erro}` genérico |
 | `consultar_politica` | `(topico: Literal[...])` | `{topico, texto}` |
 | `encaminhar_atendente` | `(motivo: Literal["reclamacao", "defeito_avaria", "dados_pessoais", "nao_resolvido", "pedido_do_cliente"], resumo: str, contato: str = None)` | `{protocolo, prazo_retorno: "24 horas úteis", canal_whatsapp}` |
 
 Regras:
-- **Busca:** `termo` é normalizado (minúsculas, sem acento) e dividido em palavras; todas precisam aparecer em `nome_normalizado`. `categoria` aceita o nome da tabela `categories`.
+- **Busca:** `termo` é normalizado (minúsculas, sem acento) e dividido em palavras; todas precisam aparecer em `nome_normalizado`. `categoria` aceita, sem diferenciar acentos ou maiúsculas, os nove nomes da tabela `categories` (enum no schema). A faixa e a ordenação usam o preço promocional quando houver, senão o preço de tabela. Para mais de 10 resultados, `total` informa o total e `aviso` sugere refinar a busca.
 - **Disponível** = `status == "active"` e `estoque > 0`.
 - **Preço** (`app/precos.py`): só promoções com `is_active = 1`; se houver mais de uma, vale a de maior desconto; `preco_pix = preco × 0,95` **apenas** quando não há promoção (senão `null`). Arredondar para 2 casas.
-- **Pedido:** e-mail comparado sem diferenciar maiúsculas; telefone comparado só pelos dígitos. Pedido inexistente e dado que não confere devolvem **a mesma** mensagem de erro.
+- **Pedido:** e-mail comparado sem diferenciar maiúsculas; telefone comparado só pelos dígitos. Pedido inexistente e dado que não confere devolvem **a mesma** mensagem de erro. Os dias desde a compra e, para pedidos entregues, desde a entrega são calculados com a data do contexto.
 - **Encaminhamento:** grava uma linha em `logs/handoffs.jsonl` com `{protocolo, ts, conversa_id, motivo, resumo, contato}`. `contato` só quando o cliente oferecer. Protocolo: `EM-AAAAMMDD-XXXX`.
 
 ### Tópicos de política

@@ -144,3 +144,7 @@ A ingestão normaliza os tipos (preço → número, estoque → inteiro, `specs`
   - **Revisão:** a sessão principal (Opus) confere o código contra a spec antes de cada commit.
 - **Dados de entrada:** o manual em PDF foi transcrito para Markdown pelo assistente, mantendo o texto original, e eu validei a transcrição comparando com o PDF.
 - **Revisão humana:** reviso cada spec antes de implementar e cada passo antes do commit.
+
+## D18 — Link para catálogo filtrado (possível site)
+- **Decisão:** se houver um site com catálogo, o assistente poderá incluir na resposta um link para a página de produtos com os filtros relevantes à solicitação já aplicados, direcionando o cliente ao catálogo.
+- **Escopo:** melhoria futura condicionada à existência do site e de uma forma definida de representar os filtros na URL; não inventar links nem filtros antes dessa integração.
