@@ -51,7 +51,8 @@ emporio-da-musica-backend/   # raiz do repositório
     run.py                  # python -m evals.run
     resultados/             # relatórios versionados (um por rodada)
     logs/                   # llm_calls.jsonl e handoffs.jsonl da avaliação (fora do git)
-  scripts/gerar_exemplos.py
+    exemplos.py             # python -m evals.exemplos: gera examples/ com o agente real (SPEC-0007)
+    logs/exemplos/          # llm_calls.jsonl e handoffs.jsonl da geração dos exemplos (fora do git)
   logs/                     # fora do git
   tests/
   examples/                 # conversas de exemplo (entregável do desafio)
@@ -133,14 +134,14 @@ Todas devolvem `dict` serializável em JSON e recebem `ctx: Contexto` obrigatór
 
 | Tool | Assinatura | Retorno (resumo) |
 | --- | --- | --- |
-| `buscar_produtos` | `(termo: str = None, categoria: str = None, preco_min: float = None, preco_max: float = None, apenas_disponiveis: bool = True, em_promocao: bool = False)` | `{total, produtos: [até 10 × {id, nome, categoria, preco, preco_promocional, desconto_percent, preco_pix, estoque, status, disponivel}], aviso?}` |
+| `buscar_produtos` | `(termo: str = None, categoria: str = None, preco_min: float = None, preco_max: float = None, apenas_disponiveis: bool = True, em_promocao: bool = False)` | `{total, produtos: [até 10 × {id, nome, categoria, preco, preco_promocional, desconto_percent, preco_pix, estoque, status, disponivel}], aviso?, indisponiveis?}` |
 | `detalhes_produto` | `(product_id: int)` | campos acima + `descricao`, `specs` (dict) |
 | `consultar_pedido` | `(order_id: int, email_ou_telefone: str)` | `{pedido, status, data_pedido, total, pagamento, codigo_rastreio, previsao_entrega, itens: [{nome, quantidade}], observacao, dias_desde_compra, dias_desde_entrega}` ou `{erro}` genérico |
 | `consultar_politica` | `(topico: Literal[...])` | `{topico, texto}` |
 | `encaminhar_atendente` | `(motivo: Literal["reclamacao", "defeito_avaria", "dados_pessoais", "nao_resolvido", "pedido_do_cliente"], resumo: str, contato: str = None)` | `{protocolo, prazo_retorno: "24 horas úteis", canal_whatsapp}` |
 
 Regras:
-- **Busca:** `termo` é normalizado (minúsculas, sem acento) e dividido em palavras; todas precisam aparecer em `nome_normalizado`. `categoria` aceita, sem diferenciar acentos ou maiúsculas, os nove nomes da tabela `categories` (enum no schema). A faixa e a ordenação usam o preço promocional quando houver, senão o preço de tabela. Para mais de 10 resultados, `total` informa o total e `aviso` sugere refinar a busca.
+- **Busca:** `termo` é normalizado (minúsculas, sem acento) e dividido em palavras; todas precisam aparecer em `nome_normalizado`. `categoria` aceita, sem diferenciar acentos ou maiúsculas, os nove nomes da tabela `categories` (enum no schema). A faixa e a ordenação usam o preço promocional quando houver, senão o preço de tabela. Para mais de 10 resultados, `total` informa o total e `aviso` sugere refinar a busca. Se nada à venda passa nos filtros, mas há produtos indisponíveis que passariam, eles vêm em `indisponiveis` com um `aviso` que traduz o status (SPEC-0002 §3.5).
 - **Disponível** = `status == "active"` e `estoque > 0`.
 - **Preço** (`app/precos.py`): só promoções com `is_active = 1`; se houver mais de uma, vale a de maior desconto; `preco_pix = preco × 0,95` **apenas** quando não há promoção (senão `null`). Arredondar para 2 casas.
 - **Pedido:** e-mail comparado sem diferenciar maiúsculas; telefone comparado só pelos dígitos. Pedido inexistente e dado que não confere devolvem **a mesma** mensagem de erro. Os dias desde a compra e, para pedidos entregues, desde a entrega são calculados com a data do contexto.
@@ -172,11 +173,11 @@ Inconsistências conhecidas e o tratamento de cada uma: [DECISIONS.md — Tratam
 ## 8. System prompt (`app/prompts.py`)
 Função pura `montar_system_prompt(agora, diretrizes, disposicoes)`. Ordem fixa: persona **Emilio** → **contatos oficiais da D13** (endereço, telefone/WhatsApp (67) 3341-4444, `contato@emporiodamusica.com.br`, usados mesmo que o manual traga outro número ou e-mail) → horário da equipe → regras → manual §7 (sem a linha do `3321-4500`) → §10 (sem o rodapé) → `## Agora` no fim (data, dia da semana, hora e a frase de `situacao_loja`). A parte variável fica no fim para aproveitar o cache de prefixo dos provedores. Regras:
 1. Preço, estoque, prazo e status só com dados de tool; o que não veio de tool o agente não sabe.
-2. Políticas → `consultar_politica`; dados → tools de produto/pedido.
+2. Políticas → `consultar_politica`; dados → tools de produto/pedido; contatos (endereço, telefone/WhatsApp, e-mail) → seção de contatos do prompt, sem tool.
 3. Contas já vêm prontas das tools; promoção mostra preço original, promocional e %; sem promoção, informa o PIX.
 4. Busca vazia → "não temos no momento", sem sugerir nada fora da busca.
 5. Frete fora da região metropolitana: valor calculado no fechamento do pedido, pelo CEP.
-6. Pedir número do pedido + e-mail ou telefone antes de consultar pedido.
+6. Pergunta sobre um pedido do cliente (status, entrega, troca, devolução, arrependimento) → `consultar_pedido`; o que faltar (número + e-mail ou telefone) é pedido já na primeira resposta, e os prazos são conferidos com `dias_desde_compra`/`dias_desde_entrega`. Defeito, avaria e reclamação seguem a regra 8.
 7. Só instrumentos: acessórios redirecionados com educação, sem indicar outras lojas (não há parceiras nos dados); assuntos fora da loja recusados com gentileza.
 8. Encaminhamento (D11): reclamação, defeito/avaria e exclusão de dados → encaminhar; pedido de atendente → perguntar uma vez, encaminhar se insistir.
 9. Traduzir os códigos das tools (`delivered`, `credit_12x`…).
@@ -192,10 +193,12 @@ Uma linha por chamada ao LLM em `logs/llm_calls.jsonl`:
 ## 10. Avaliação (`evals/`)
 `casos.json`: lista de `{id, categoria, descricao, agora: "AAAA-MM-DDTHH:MM", turnos: [str], espera: [ {tools, tools_proibidas, contem, contem_algum: [[str]], nao_contem} | null ]}`, com uma expectativa por turno. A verificação é determinística (tools do turno e fatos no texto normalizado: minúsculas, sem acento, sem ponto de milhar), sem LLM-juiz.
 
-`python -m evals.run [--sem-memoria] [--casos id1,id2] [--provedor P] [--modelo M] [--esforco E]` cria um agente por caso com o `agora` do caso (`conversa_id` `eval-<id>`, logs em `evals/logs/`) e grava `evals/resultados/<AAAAMMDD-HHMM>-<modelo>-<esforco>[-sem-memoria][-parcial].md` com aprovados por categoria, acerto multi-turno, tokens, custo estimado, latência média e máxima por turno e as falhas com motivo. `--sem-memoria` passa histórico vazio a cada turno (ablação da memória, D09); os overrides comparam modelos sem editar o `.env` (D05). Relatórios `-parcial` não são commitados. Contrato: [SPEC-0006](specs/SPEC-0006-avaliacao.md).
+`python -m evals.run [--sem-memoria] [--casos id1,id2] [--provedor P] [--modelo M] [--esforco E]` cria um agente por caso com o `agora` do caso (`conversa_id` `eval-<id>`, logs em `evals/logs/`) e grava `evals/resultados/<AAAAMMDD-HHMM>-<modelo>-<esforco>[-sem-memoria][-parcial][-N].md` (o `-N` só quando o nome já existe) com aprovados por categoria, acerto multi-turno, tokens, custo estimado, latência média e máxima por turno e as falhas com motivo. `--sem-memoria` passa histórico vazio a cada turno (ablação da memória, D09); os overrides comparam modelos sem editar o `.env` (D05). Relatórios `-parcial` não são commitados. Contrato: [SPEC-0006](specs/SPEC-0006-avaliacao.md).
+
+`python -m evals.exemplos` roda os 5 roteiros de `evals/exemplos.py` com o agente real (um agente por conversa, com o `agora` do roteiro, `conversa_id` `exemplo-<nome>`, logs em `evals/logs/exemplos/`) e grava `examples/<nome>.md` com as mensagens, as respostas, as ferramentas chamadas com os argumentos, tokens e custo. Contrato: [SPEC-0007](specs/SPEC-0007-exemplos-readme.md).
 
 ## 11. Testes
 - `pytest` em `tests/`, um arquivo por módulo (`test_ingest.py`, `test_tools.py`…).
 - Banco de teste: ingestão real dos CSVs num `tmp_path` (são pequenos), via fixture em `conftest.py`.
 - LLM: sempre `FakeLLM`. Adaptadores testados convertendo objetos de resposta falsos do SDK (sem rede).
-- Testes com rede: só em `evals/`, nunca no `pytest`. A suíte de avaliação em si é testada com `FakeLLM` em `tests/test_avaliacao.py` e `tests/test_evals_run.py`; a rodada real (`python -m evals.run`) fica fora do `pytest`.
+- Testes com rede: só em `evals/`, nunca no `pytest`. A suíte de avaliação em si é testada com `FakeLLM` em `tests/test_avaliacao.py` e `tests/test_evals_run.py`; a rodada real (`python -m evals.run`) fica fora do `pytest`. O gerador de exemplos é testado com `FakeLLM` em `tests/test_exemplos.py`; `tests/test_readme.py` confere as seções obrigatórias e os links do README.

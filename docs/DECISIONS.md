@@ -29,7 +29,7 @@
   | `buscar_produtos` | preço, disponibilidade, catálogo, promoções | SQLite |
   | `detalhes_produto` | especificações técnicas e descrição | SQLite |
   | `consultar_pedido` | status, rastreio, previsão de entrega | SQLite |
-  | `consultar_politica` | horários, endereço, pagamento, troca, frete, garantia, privacidade | `politicas.md` |
+  | `consultar_politica` | horários, pagamento, troca, frete, garantia, privacidade | `politicas.md` |
   | `encaminhar_atendente` | casos que precisam de uma pessoa (D11) | registro local |
 
 - **Por quê:** o desafio pede que o agente saiba *quando* consultar dados e *quando* consultar políticas. Com function calling essa decisão fica explícita e rastreável: cada chamada aparece no log e nos exemplos. Não usei LangChain nem LangGraph: menos dependências e menos abstração deixam a lógica mais simples.
@@ -47,10 +47,26 @@
 - **Decisão:** uso a OpenAI, mas o agente não depende dela. Criei uma interface única (`LLMClient`) e um adaptador pequeno para cada provedor: **OpenAI, Anthropic e Gemini**. Provedor e modelo são escolhidos no `.env` (`LLM_PROVIDER`, `LLM_MODEL`). As ferramentas, o loop e os testes não sabem qual provedor está rodando.
 - **Por quê:** é uma medida de segurança. Se um provedor ficar fora do ar, mudar o preço ou mudar a política, troco com uma linha no `.env`, sem reescrever a aplicação. Isso também permite comparar modelos na mesma suíte de avaliação (D12). Para um protótipo, o `.env` é suficiente; um painel de configuração não se justifica.
 - **Descartei:** LiteLLM e bibliotecas parecidas. Resolveriam a troca de provedor, mas com uma dependência grande para algo que cabe em três adaptadores curtos, e a separação ficaria escondida em vez de visível no código.
-- **Modelo padrão: `gpt-6-luna` com raciocínio `medium`.** É o modelo barato atual da OpenAI (US$ 0,10 por 1M de entrada e 0,50 por 1M de saída), e o raciocínio ajuda no que mais importa para o atendimento: escolher a ferramenta certa, combinar pedido com política e não inventar. O preço é latência maior (alguns segundos a mais por resposta), que aceito num chat de atendimento. O esforço de raciocínio fica no `.env` (`LLM_REASONING_EFFORT`). **Plano B:** se nos testes ele ficar lento demais ou impreciso, troco para o `gpt-5.4-mini` mudando só o `.env`.
+- **Modelo padrão: `gpt-6-luna` com raciocínio `medium`.** É o modelo barato atual da OpenAI (US$ 0,10 por 1M de entrada e 0,50 por 1M de saída), e o raciocínio ajuda no que mais importa para o atendimento: escolher a ferramenta certa, combinar pedido com política e não inventar. O preço é latência maior (alguns segundos a mais por resposta), que aceito num chat de atendimento. O esforço de raciocínio fica no `.env` (`LLM_REASONING_EFFORT`). **A avaliação confirmou a escolha** (números abaixo). O plano B era o `gpt-5.4-mini`: medi e descartei, porque ele errou mais e saiu mais caro. A troca continua sendo só uma linha no `.env`.
 - **Temperatura:** com raciocínio ligado a OpenAI não aceita temperatura, então ela só é enviada (0,2) quando o raciocínio está desligado. Nos outros provedores uso o padrão recomendado por cada um: a Anthropic deixou de aceitar o parâmetro e o Google recomenda manter 1.0 no Gemini.
-- **Comparação:** a mesma suíte de avaliação roda com o `gpt-6-luna` em `medium` e em `low` e com o `gpt-5.4-mini`, só trocando o `.env`. O README registra acerto, custo e latência de cada um.
-- **Custos:** a estimativa é de US$ 0,002 a 0,003 por turno com o `gpt-6-luna` (os tokens de raciocínio são cobrados como saída), então US$ 5 cobrem bem mais de mil turnos. Os números reais saem do registro de uso (D14) e vão para o README.
+- **Comparação (03/11/2026):** rodei a suíte de 25 casos (30 turnos) com cada configuração. Os relatórios estão em `evals/resultados/`.
+
+  | Configuração | Versão do código | Rodadas | Acerto | Custo por rodada | Latência média / máxima por turno |
+  | --- | --- | ---: | --- | ---: | ---: |
+  | **`gpt-6-luna` medium** | final | 3 | **25/25 nas 3** | US$ 0,0039 a 0,0051 (média 0,0046) | 3,3 s / 9,1 s |
+  | `gpt-6-luna` high | final | 3 | 25/25 nas 3 | US$ 0,0051 a 0,0060 (média 0,0055) | 3,8 s / 14,7 s |
+  | `gpt-6-luna` low | final | 3 | 25/25, 25/25 e 24/25 | US$ 0,0036 a 0,0045 (média 0,0041) | 2,9 s / 7,0 s |
+  | `gpt-6-luna` medium | antes das correções | 1 | 21/25 | US$ 0,0062 | 4,0 s / 8,1 s |
+  | `gpt-6-luna` high | antes / com parte das correções | 2 | 22/25 e 23/25 | US$ 0,0067 e 0,0068 | 4,6 s / 10,9 s |
+  | `gpt-5.4-mini` sem raciocínio | antes das correções | 1 | 16/25 | US$ 0,0387 | 2,7 s / 6,9 s |
+  | `gemini-3.5-flash-lite` | antes das correções | 1 | 18/25 | US$ 0,0515 (estimado; usei a chave gratuita) | 40,2 s / 107,9 s |
+
+  - **Por que `medium` e não `high`:** os dois acertaram tudo nas 3 rodadas da versão final. O `medium` custou cerca de 17% menos e respondeu mais rápido; o pior turno levou 9,1 s, contra 14,7 s no `high`. Com acerto empatado, num chat de atendimento a latência decide.
+  - **Por que `medium` e não `low`:** o `low` também quase empatou. A única reprovação dele foi um falso negativo: no arrependimento dentro do prazo, ele respondeu "você ainda pode solicitar a devolução", e a suíte só aceita formas como "pode devolver" e "tem direito". Ele saiu cerca de 10% mais barato que o `medium` e um pouco mais rápido. Mesmo assim fico com o `medium`, como margem de segurança: os 25 casos não cobrem tudo, e o raciocínio extra ajuda justamente no que é mais difícil no atendimento, que é combinar pedido e política sem inventar. A diferença de custo é de cerca de US$ 0,0005 por rodada de 30 turnos. Não mudei o caso, para não ajustar a suíte para o modelo que eu não escolhi.
+  - **Por que não o `gpt-5.4-mini`:** além de acertar menos, ele errou em pontos que importam para a loja. Aceitou uma devolução sem consultar o pedido, que estava 89 dias fora do prazo; respondeu sobre frete e pagamento sem consultar a política e esqueceu o desconto do PIX; no domingo, não avisou quando a equipe volta. E custou cerca de 6 vezes mais que o luna, porque o preço por token é maior e o cache rendeu menos. Só foi mais rápido.
+  - **Gemini:** fica fora da comparação. A chave gratuita limita as requisições por minuto, e isso explica os 40 s de média. Mesmo assim ele ajudou: duas reprovações dele eram respostas certas que a suíte não reconhecia, e corrigi os casos (D12).
+  - **Ressalva:** o mini e o Gemini rodaram antes das correções que a avaliação motivou (D12), então a comparação com eles não é exata. Mesmo descontando as falhas que eram do projeto, o mini teve 4 erros dele, e o luna nenhum.
+- **Custos medidos:** cerca de **US$ 0,00015 por turno** com o `gpt-6-luna` medium (US$ 0,0046 por rodada de 30 turnos), mais de 10 vezes abaixo da minha estimativa inicial de US$ 0,002 a 0,003. O motivo é o cache de prefixo: o system prompt e o manual vêm primeiro e quase não mudam, e cerca de 93% dos tokens de entrada saíram do cache. Com US$ 5 dá para pagar mais de 30 mil turnos. São custos estimados pela tabela de preços do projeto (D14); conferi com o painel de uso da OpenAI e eles batem. A projeção mensal está na D14.
 
 ## D06 — Persona e estratégia de prompt
 - **Decisão:** system prompt curto, montado a partir do manual (§7.1 tom de voz, §7.2 fluxo, §7.3 situações especiais), com:
@@ -119,10 +135,28 @@ A ingestão normaliza os tipos (preço → número, estoque → inteiro, `specs`
 | Produto `coming_soon` aparece num pedido entregue | Ignoro (é histórico). Para venda, `coming_soon` = indisponível |
 | Status `discontinued` e `coming_soon` | "Disponível" = `active` com estoque > 0. O agente explica os outros status (§7.3) |
 | Promoções: o `is_active` é a fonte da verdade, não o calendário | Só aplico promoções com `is_active = 1` |
+| Endereço e contatos: estão no manual (§1) e no system prompt | Ficam só no system prompt. O agente responde direto dele, sem chamar `consultar_politica`: na avaliação, a chamada só gastava cerca de 2,6 s para trazer um dado que ele já tinha |
 
 ## D14 — Custo e observabilidade
 - **Decisão:** cada chamada ao LLM gera uma linha de log com provedor, modelo, tokens (direto do `usage` da API), latência, ferramentas chamadas e custo estimado (tabela de preços configurável). Limites simples protegem o orçamento: iterações do loop, tamanho da mensagem e janela de histórico.
 - **Por quê:** é pouco código e me dá números reais de custo por conversa para o README, além de mostrar como o agente se comportaria operando de verdade.
+- **Projeção de custo mensal:** imaginei o Emilio num site com 5.000 acessos por mês e supus que 3% das visitas abrem o chat, ou seja, 150 conversas. Não achei dado do Brasil nem de loja de instrumentos sobre isso. Os 3% ficam entre as duas medições públicas que encontrei:
+  - **0,84% das visitas:** 40,1 milhões de conversas em 4,78 bilhões de visitas a lojas online em 2024, em 175 mil contas da Europa, Ásia, Oceania e África ([Smartsupp](https://www.smartsupp.com/blog/analysing-5-billion-website-visits-how-ecommerce-customers-use-chat/)). É a fonte mais sólida: amostra enorme e dado medido.
+  - **~15% de quem viu o botão do chat:** quase 300 mil sites ([Tidio](https://www.tidio.com/blog/live-chat-statistics/)). É número de fornecedor, sem ano nem método detalhados, e tende a ser otimista.
+
+  Com o custo medido do `gpt-6-luna` medium (D05):
+
+  | Cenário | Taxa de uso do chat | Conversas por mês | Gasto realista | Gasto pessimista |
+  | --- | ---: | ---: | ---: | ---: |
+  | Baixo | 0,84% | 42 | US$ 0,04 | US$ 1,22 |
+  | **Base** | **3%** | **150** | **US$ 0,14** | **US$ 4,40** |
+  | Alto | 15% | 750 | US$ 0,68 | US$ 21,90 |
+
+  - **Realista:** 6 turnos por conversa e cache como o medido, cerca de US$ 0,0009 por conversa.
+  - **Pessimista:** 15 turnos, nenhum cache e 3 chamadas por turno com o histórico cheio (5.000 tokens de entrada e 300 de saída por chamada), cerca de US$ 0,029 por conversa.
+  - **Teto técnico:** todo turno batendo o limite de 5 chamadas, 20 turnos e nenhum cache, cerca de US$ 0,12 por conversa. Na prática não acontece, mas os limites do código garantem que o custo não passa disso.
+  - **O que muda no Empório:** dois fatores puxam em sentidos opostos. Instrumento é compra cara (de R$ 159 a R$ 11.499 no catálogo), que gera dúvida antes de fechar (PIX, parcelamento, frete, troca), e o Emilio responde fora do horário. Por outro lado, no Brasil o WhatsApp é o canal natural para falar com loja: cerca de 80% dos usuários conversam com empresas por ele (Super Panorama Mobile Time/Opinion Box 2026, citado pela [Unred](https://unred.com.br/blog/brasileiros-conversam-marcas-whatsapp)), e parte das dúvidas iria direto para o WhatsApp da loja.
+  - **Conclusão:** o custo das conversas legítimas é irrelevante; o risco é abuso (D15). Um limite de US$ 20 a 25 por mês no painel da OpenAI cobre até o cenário alto pessimista. Com o site no ar, a taxa real sai do registro de uso: conversas distintas no mês divididas pelos acessos.
 - **Descartei (por enquanto):**
   - **Classificação de intenção:** sendo realista, ela só gera valor com volume real de clientes (para decidir o que automatizar primeiro). Aqui ela classificaria só conversas de teste. Os casos de avaliação já têm categoria, e as ferramentas registradas no log permitem derivar a intenção depois, sem custo extra.
   - **Dashboard e simulador de demanda:** exigiriam tráfego que não existe. Números simulados poderiam parecer resultado. No README, projeto o custo mensal a partir do custo médio medido.
