@@ -1,6 +1,6 @@
 # SPEC-0006 — Suíte de avaliação com o LLM real
 
-- **Status:** aprovada
+- **Status:** implementada
 - **PRD:** [PRD-0001](../prds/PRD-0001-agente-atendimento.md)
 - **Depende de:** SPEC-0004 (`criar_agente`, `Agente.responder`, `Resposta`, `Config`, `carregar_config`, `situacao_loja`). Reutiliza `abrir_banco`, `configurar_utf8` e `formatar_custo` da SPEC-0005, `normalizar` da SPEC-0001 e `TOOLS` da SPEC-0002.
 
@@ -716,16 +716,16 @@ Commits seguindo o ciclo da spec (AGENTS.md, D16; escopo `evals`). Antes de cada
 6. Depois da verificação manual (autor, API real): `docs(evals): relatórios da avaliação` com os arquivos de `evals/resultados/`.
 
 ## 7. Critérios de aceite
-- [ ] [AC-01] `evals/casos.json` tem os 25 casos da §3.2, em 7 categorias, 5 deles com mais de um turno, com `agora` cobrindo dia útil aberto e fechado, sábado, domingo e feriado; `carregar_casos` recusa caso malformado com `ValueError` que cita o caso.
-- [ ] [AC-02] A verificação é determinística (tools do turno e fatos no texto, sem LLM-juiz), com texto normalizado (minúsculas, sem acento, espaços colapsados, sem ponto de milhar), de modo que `R$ 2.089,05`, `R$2089,05` e `2089,05` casam com `"2.089,05"`; motivos de falha com os textos da §3.3.
-- [ ] [AC-03] Cada caso roda num agente novo com o `agora` do caso (prompt e `ctx.hoje`), `conversa_id = "eval-<id>"`, logs e handoffs em `evals/logs/` (fora do git), sem misturar com os da CLI.
-- [ ] [AC-04] Sem flag, o histórico acumula `para_historico`; com `--sem-memoria`, cada turno recebe histórico vazio; o relatório mostra o acerto dos casos com mais de um turno, para comparar as duas rodadas.
-- [ ] [AC-05] Falha de API (`status` diferente de `ok`) ou exceção num caso reprova só aquele caso, com o motivo no relatório; a suíte continua.
-- [ ] [AC-06] O relatório Markdown tem configuração, limites, aprovados por categoria e total, acerto multi-turno, tokens, custo estimado (`n/d` se algum for desconhecido), latência média e máxima por turno, a tabela de casos e as falhas com motivo, ferramentas e resposta truncada; ele é gravado em `evals/resultados/<AAAAMMDD-HHMM>-<modelo>-<esforco>[-sem-memoria][-parcial].md` e o resumo sai no terminal.
-- [ ] [AC-07] `--provedor`, `--modelo` e `--esforco` sobrescrevem o `.env` (via `dataclasses.replace`) sem editá-lo; `--casos` roda um subconjunto, e id desconhecido sai com código 2 antes de criar o cliente; erro de configuração sai com código 1, sem traceback.
-- [ ] [AC-08] `python -m evals.run` funciona a partir da raiz e os testes importam `evals` sem mudar o `pyproject.toml`; importar `evals.run` não carrega SDK de provedor; nenhuma dependência nova; nenhum teste usa a rede.
-- [ ] [AC-TESTES] `pytest` verde, sem rede.
-- [ ] [AC-LINT] `ruff check .` verde.
+- [x] [AC-01] `evals/casos.json` tem os 25 casos da §3.2, em 7 categorias, 5 deles com mais de um turno, com `agora` cobrindo dia útil aberto e fechado, sábado, domingo e feriado; `carregar_casos` recusa caso malformado com `ValueError` que cita o caso.
+- [x] [AC-02] A verificação é determinística (tools do turno e fatos no texto, sem LLM-juiz), com texto normalizado (minúsculas, sem acento, espaços colapsados, sem ponto de milhar), de modo que `R$ 2.089,05`, `R$2089,05` e `2089,05` casam com `"2.089,05"`; motivos de falha com os textos da §3.3.
+- [x] [AC-03] Cada caso roda num agente novo com o `agora` do caso (prompt e `ctx.hoje`), `conversa_id = "eval-<id>"`, logs e handoffs em `evals/logs/` (fora do git), sem misturar com os da CLI.
+- [x] [AC-04] Sem flag, o histórico acumula `para_historico`; com `--sem-memoria`, cada turno recebe histórico vazio; o relatório mostra o acerto dos casos com mais de um turno, para comparar as duas rodadas.
+- [x] [AC-05] Falha de API (`status` diferente de `ok`) ou exceção num caso reprova só aquele caso, com o motivo no relatório; a suíte continua.
+- [x] [AC-06] O relatório Markdown tem configuração, limites, aprovados por categoria e total, acerto multi-turno, tokens, custo estimado (`n/d` se algum for desconhecido), latência média e máxima por turno, a tabela de casos e as falhas com motivo, ferramentas e resposta truncada; ele é gravado em `evals/resultados/<AAAAMMDD-HHMM>-<modelo>-<esforco>[-sem-memoria][-parcial].md` e o resumo sai no terminal.
+- [x] [AC-07] `--provedor`, `--modelo` e `--esforco` sobrescrevem o `.env` (via `dataclasses.replace`) sem editá-lo; `--casos` roda um subconjunto, e id desconhecido sai com código 2 antes de criar o cliente; erro de configuração sai com código 1, sem traceback.
+- [x] [AC-08] `python -m evals.run` funciona a partir da raiz e os testes importam `evals` sem mudar o `pyproject.toml`; importar `evals.run` não carrega SDK de provedor; nenhuma dependência nova; nenhum teste usa a rede.
+- [x] [AC-TESTES] `pytest` verde, sem rede.
+- [x] [AC-LINT] `ruff check .` verde.
 - **Verificação manual (autor, API real, ~US$ 0,30 a 0,65 no total):** com a chave no `.env` e o modelo padrão (`gpt-6-luna`, `medium`):
   ```bash
   python -m evals.run                                         # 1. luna medium (padrão)
