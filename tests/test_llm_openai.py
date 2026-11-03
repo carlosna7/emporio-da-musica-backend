@@ -180,3 +180,24 @@ def test_historico_duas_chamadas_openai():
     assert itens[1] == {"role": "assistant", "content": "Vou verificar."}
     assert [item["call_id"] for item in itens[2:]] == ["c1", "c2", "c1", "c2"]
     assert "violão" in itens[2]["arguments"]
+
+
+@pytest.mark.parametrize("effort", ["medium", "none", None])
+def test_raciocinio(effort):
+    from openai.types.responses import Response, ResponseOutputMessage, ResponseOutputText
+
+    item = ResponseOutputMessage(
+        id="m",
+        role="assistant",
+        status="completed",
+        type="message",
+        content=[ResponseOutputText(annotations=[], text="ok", type="output_text")],
+    )
+    resposta = Response.model_construct(output=[item], usage=None)
+    capturado = {}
+    cliente = SimpleNamespace(
+        responses=SimpleNamespace(create=lambda **kw: capturado.update(kw) or resposta)
+    )
+    OpenAIClient("x", "k", cliente=cliente, reasoning_effort=effort).chat("sys", [], [])
+    assert capturado.get("reasoning") == ({"effort": effort} if effort is not None else None)
+    assert ("temperature" in capturado) == (effort in (None, "none"))

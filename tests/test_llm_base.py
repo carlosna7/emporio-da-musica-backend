@@ -67,3 +67,20 @@ def test_fabrica_detalhes(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-teste")
     cliente = criar_cliente(" OpenAI ", "gpt-5.4-mini")
     assert isinstance(cliente, OpenAIClient) and cliente.model == "gpt-5.4-mini"
+
+
+def test_fabrica_raciocinio(monkeypatch):
+    from app.llm.base import criar_cliente
+
+    monkeypatch.setenv("OPENAI_API_KEY", "k")
+    assert (
+        criar_cliente("openai", "gpt-6-luna", reasoning_effort="medium").reasoning_effort
+        == "medium"
+    )
+
+
+def test_anthropic_ignora_raciocinio():
+    pytest.importorskip("anthropic")
+    from app.llm.base import criar_cliente
+
+    assert criar_cliente("anthropic", "claude-haiku-5-5", api_key="k", reasoning_effort="medium")
