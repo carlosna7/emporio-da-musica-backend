@@ -22,6 +22,12 @@ CATEGORIAS = (
     "Cordas Orquestrais",
     "Ukuleles",
 )
+AVISO_INDISPONIVEIS = (
+    "Nenhum produto à venda com esses filtros. Os itens de 'indisponiveis' existem no "
+    "catálogo, mas não podem ser comprados agora: diga o motivo de cada um (estoque 0 = "
+    "esgotado; discontinued = descontinuado, saiu de linha; coming_soon = pré-lançamento, "
+    "ainda não está à venda)."
+)
 
 
 @dataclass
@@ -102,7 +108,7 @@ def buscar_produtos(
     if not isinstance(apenas_disponiveis, bool) or not isinstance(em_promocao, bool):
         return {"erro": "Filtros de disponibilidade e promoção devem ser booleanos."}
     palavras = normalizar(termo or "").split()
-    produtos = []
+    produtos, indisponiveis = [], []
     for linha in _linhas(ctx):
         p = _produto(linha, ctx)
         final = p["preco_promocional"] if p["preco_promocional"] is not None else p["preco"]
@@ -110,24 +116,32 @@ def buscar_produtos(
             x in linha["nome_normalizado"] for x in palavras
         ):
             continue
-        if (apenas_disponiveis and not p["disponivel"]) or (
-            em_promocao and p["desconto_percent"] is None
-        ):
+        if em_promocao and p["desconto_percent"] is None:
             continue
         if (preco_min is not None and final < preco_min) or (
             preco_max is not None and final > preco_max
         ):
             continue
-        produtos.append(p)
-    produtos.sort(
-        key=lambda p: (
+        if apenas_disponiveis and not p["disponivel"]:
+            indisponiveis.append(p)
+        else:
+            produtos.append(p)
+
+    def ordem(p):
+        return (
             p["preco_promocional"] if p["preco_promocional"] is not None else p["preco"],
             p["id"],
         )
-    )
+
+    produtos.sort(key=ordem)
     total = len(produtos)
     resultado = {"total": total, "produtos": produtos[:10]}
-    if total == 0:
+    # Sem isso o modelo lê "nada encontrado" e diz "não temos", sem buscar de novo
+    # com apenas_disponiveis=false (SPEC-0002 §3.5, passo 6).
+    if total == 0 and indisponiveis:
+        resultado["aviso"] = AVISO_INDISPONIVEIS
+        resultado["indisponiveis"] = sorted(indisponiveis, key=ordem)[:10]
+    elif total == 0:
         resultado["aviso"] = "Nenhum produto encontrado com esses filtros."
     elif total > 10:
         resultado["aviso"] = (
@@ -368,7 +382,7 @@ TOOLS = {
         funcao=consultar_politica,
         descricao=(
             "Devolve o texto oficial do manual da loja sobre um tópico. Use "
-            "para endereço e contatos, horários, formas de pagamento e "
+            "para horários, formas de pagamento e "
             "parcelamento, trocas e devoluções, frete e prazos de entrega, "
             "regras de promoção, garantia e privacidade. Responda só com o que "
             "estiver no texto."

@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from app.tools import Contexto, buscar_produtos, detalhes_produto
+from app.tools import AVISO_INDISPONIVEIS, Contexto, buscar_produtos, detalhes_produto
 
 
 @pytest.fixture
@@ -74,6 +74,37 @@ def test_categoria_vazia(ctx, categoria):
         "produtos": [],
         "aviso": "Nenhum produto encontrado com esses filtros.",
     }
+
+
+@pytest.mark.parametrize(
+    ("termo", "esperado"), [("gf-3d", [96]), ("sn-7c", [113]), ("kala ka-abp-ctg", [130])]
+)
+def test_busca_padrao_traz_indisponiveis(ctx, termo, esperado):
+    r = buscar_produtos(termo=termo, ctx=ctx)
+    assert r["total"] == 0 and r["produtos"] == []
+    assert r["aviso"] == AVISO_INDISPONIVEIS
+    assert [p["id"] for p in r["indisponiveis"]] == esperado
+    assert r["indisponiveis"][0] == buscar_produtos(
+        termo=termo, apenas_disponiveis=False, ctx=ctx
+    )["produtos"][0]
+    for palavra in ("esgotado", "descontinuado", "pré-lançamento"):
+        assert palavra in AVISO_INDISPONIVEIS
+
+
+@pytest.mark.parametrize(
+    "argumentos",
+    [
+        {"termo": "gf-3d", "apenas_disponiveis": False},
+        {"termo": "7 cordas"},
+        {"termo": "violão"},
+        {"termo": "gf-3d", "preco_max": 100},
+    ],
+)
+def test_indisponiveis_so_quando_nada_a_venda_passa(ctx, argumentos):
+    r = buscar_produtos(**argumentos, ctx=ctx)
+    assert "indisponiveis" not in r
+    if r["total"] == 0:
+        assert r["aviso"] == "Nenhum produto encontrado com esses filtros."
 
 
 @pytest.mark.parametrize(

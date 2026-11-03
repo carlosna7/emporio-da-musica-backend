@@ -82,13 +82,14 @@ def buscar_produtos(termo: str | None = None, categoria: str | None = None,
                     preco_min: float | None = None, preco_max: float | None = None,
                     apenas_disponiveis: bool = True, em_promocao: bool = False,
                     *, ctx: Contexto) -> dict:
-    """{"total": int, "produtos": [produto, ...], "aviso"?: str}"""
+    """{"total": int, "produtos": [produto, ...], "aviso"?: str, "indisponiveis"?: [produto, ...]}"""
 ```
 1. Validar os tipos (§3.3). `categoria`: comparar `normalizar(categoria.strip())` com `normalizar(nome)` de cada item de `CATEGORIAS` (aceita "violoes"); sem correspondência → `{"erro": "Categoria inválida: <valor>. Válidas: <CATEGORIAS separadas por vírgula>"}`. `preco_min > preco_max` → erro.
 2. Ler **todos** os produtos com o nome da categoria (`products JOIN categories`) e montar cada um no formato da §3.4. O catálogo tem 65 itens: filtrar em Python é mais simples que montar SQL dinâmico e deixa o filtro de preço usar o preço final.
 3. Filtros (todos combinados com E): categoria; `termo` → `normalizar(termo).split()`, **toda** palavra precisa ser substring de `nome_normalizado` (o nome, nunca a descrição); `apenas_disponiveis` → `disponivel`; `em_promocao` → `desconto_percent is not None`; `preco_min <= preço final <= preco_max`.
 4. Ordenar por (preço final, id) crescente. `total` = quantidade filtrada; `produtos` = os 10 primeiros.
 5. `aviso` só quando: `total == 0` → `"Nenhum produto encontrado com esses filtros."`; `total > 10` → `f"Mostrando os 10 mais baratos de {total}. Refine com termo ou faixa de preço para ver os demais."`. Categoria válida sem produtos (6, 7 e 8) cai no primeiro caso, sem erro.
+6. **Indisponíveis (revisão de 2026-11-03, depois da 1ª avaliação real):** se `total == 0`, `apenas_disponiveis` é `True` e existem produtos que passam em **todos os outros** filtros mas não estão disponíveis, o resultado ganha `"indisponiveis"` (os 10 primeiros, mesma ordem do passo 4) e o `aviso` passa a ser `AVISO_INDISPONIVEIS = "Nenhum produto à venda com esses filtros. Os itens de 'indisponiveis' existem no catálogo, mas não podem ser comprados agora: diga o motivo de cada um (estoque 0 = esgotado; discontinued = descontinuado, saiu de linha; coming_soon = pré-lançamento, ainda não está à venda)."`. `total` continua contando só os disponíveis. Motivo: nas rodadas de `gpt-6-luna` e `gpt-5.4-mini`, o modelo recebia "Nenhum produto encontrado" para "Vocês têm o Giannini GF-3D?" e respondia "não temos no momento", sem buscar de novo com `apenas_disponiveis=false` como a descrição pede. Devolver os itens já na primeira chamada tira essa decisão do modelo e economiza uma iteração.
 
 **Por que o filtro de preço usa o preço final (promocional quando houver), e não o de tabela nem o PIX:** quem pergunta "até R$ 1000" quer saber o que vai pagar; o promocional vale para qualquer forma de pagamento, enquanto o PIX depende de o cliente escolher PIX. Ex.: o ukulele 121 (R$ 549,00, 20% off → R$ 439,20) aparece em "até R$ 440".
 
@@ -156,7 +157,8 @@ Schemas usam só `type`, `description`, `enum`, `properties` e `required` (subco
 - `required: ["order_id", "email_ou_telefone"]`; `order_id` integer: `"Número do pedido."`; `email_ou_telefone` string: `"E-mail ou telefone do cliente, como ele informou."`
 
 **`consultar_politica`**
-- descricao: `"Devolve o texto oficial do manual da loja sobre um tópico. Use para endereço e contatos, horários, formas de pagamento e parcelamento, trocas e devoluções, frete e prazos de entrega, regras de promoção, garantia e privacidade. Responda só com o que estiver no texto."`
+- descricao: `"Devolve o texto oficial do manual da loja sobre um tópico. Use para horários, formas de pagamento e parcelamento, trocas e devoluções, frete e prazos de entrega, regras de promoção, garantia e privacidade. Responda só com o que estiver no texto."`
+- **Revisão de 2026-11-03:** a descrição deixou de citar "endereço e contatos". Os contatos oficiais vêm da seção do system prompt (D13, SPEC-0004 regra 2); citar a tool para eles fazia o modelo chamá-la sem necessidade. O tópico `sobre_a_loja` continua no `enum`, porque a seção do manual ainda traz quem somos, endereço e contatos.
 - `required: ["topico"]`; `topico` string, `enum: list(TOPICOS)`: `"sobre_a_loja: quem somos, endereço, contatos; horarios; pagamentos: formas e parcelamento; trocas_devolucoes: arrependimento, defeito, preferência; frete_entregas: valores, prazos, rastreio (não calcula frete por CEP); promocoes: regras gerais (preço de produto vem de buscar_produtos); garantia; privacidade: dados pessoais e LGPD."`
 
 **`encaminhar_atendente`**
@@ -203,6 +205,8 @@ Toda chamada de tool nos testes passa `ctx=ctx` (omitido abaixo quando óbvio). 
 - [x] Filtro pelo preço final: `categoria="Ukuleles", preco_max=440` → `ids == [119, 118, 116, 117, 127, 120, 121]` (121 entra pelo promocional 439,20); `categoria="Ukuleles", preco_min=440` → `121 not in ids`.
 - [x] Estoque zero (produto 96): `termo="gf-3d"` → `total == 0`; com `apenas_disponiveis=False` → `estoque == 0`, `status == "active"`, `disponivel is False`, `preco_pix == 759.91`.
 - [x] Descontinuado (113): `termo="sn-7c", apenas_disponiveis=False` → `status == "discontinued"`, `disponivel is False`. E `termo="7 cordas"` → `ids == [112, 110, 109, 111]`; com `apenas_disponiveis=False` → `ids == [113, 112, 110, 109, 111]`.
+- [x] Indisponíveis na busca padrão (§3.5 passo 6, parametrizado): `termo="gf-3d"` → `[96]`, `termo="sn-7c"` → `[113]`, `termo="kala ka-abp-ctg"` → `[130]`; em cada um `total == 0`, `produtos == []`, `aviso == AVISO_INDISPONIVEIS` e os ids de `indisponiveis` são os indicados, no formato da §3.4. `AVISO_INDISPONIVEIS` contém `"esgotado"`, `"descontinuado"` e `"pré-lançamento"`.
+- [x] Indisponíveis só quando faz sentido: sem a chave `indisponiveis` em `termo="gf-3d", apenas_disponiveis=False` (o 96 vem em `produtos`), em `termo="7 cordas"` (`total == 4`, o 113 fica de fora), em `termo="violão"` (nada casa) e em `termo="gf-3d", preco_max=100` (o 96 não passa no preço; `aviso` é o `"Nenhum produto encontrado com esses filtros."`).
 - [x] Sem filtros: `buscar_produtos(ctx=ctx)` → `total == 61`, `len(produtos) == 10`, `ids[0] == 119`.
 - [x] Categorias vazias (parametrizado: `"Instrumentos de Sopro (Madeiras)"`, `"Instrumentos de Sopro (Metais)"`, `"Cordas Orquestrais"`) → `{"total": 0, "produtos": [], "aviso": "Nenhum produto encontrado com esses filtros."}`, sem `"erro"`.
 - [x] Entrada inválida (parametrizado; cada um devolve dict com `"erro"`): `categoria="Acessórios"` (e a mensagem contém `"Violões"`); `preco_max=-1`; `preco_max="mil"`; `preco_max=True`; `preco_min=500, preco_max=100`; `apenas_disponiveis="sim"`; `termo=123`.
@@ -254,6 +258,7 @@ Cada par `test` → `feat` roda `pytest` (com `--basetemp` se o temp do sistema 
 ## 7. Critérios de aceite
 - [x] [AC-01] `calcular_precos` aplica só o maior desconto ativo, não dá PIX sobre promoção, dá 5% de PIX sem promoção e arredonda meio centavo para cima.
 - [x] [AC-02] `buscar_produtos` filtra por termo (palavras no nome normalizado), categoria (normalizada, com enum), disponibilidade, promoção e faixa de preço final; ordena por preço; devolve no máximo 10 com `total` e `aviso`; categoria vazia dá `total` 0 sem erro.
+- [x] [AC-02b] Busca padrão sem nada à venda, mas com produtos indisponíveis que passam nos outros filtros, devolve esses produtos em `indisponiveis` com `AVISO_INDISPONIVEIS` (revisão de 2026-11-03).
 - [x] [AC-03] `detalhes_produto` devolve os mesmos campos de preço da busca, mais `descricao` e `specs` como dict.
 - [x] [AC-04] `consultar_pedido` só responde com número do pedido + e-mail ou telefone do cliente daquele pedido; inexistente e não conferido devolvem o mesmo `ERRO_PEDIDO`; não expõe dados do cliente; traz `dias_desde_compra` e `dias_desde_entrega` calculados com `ctx.hoje`.
 - [x] [AC-05] `consultar_politica` devolve a seção do tópico; tópico inválido vira `{"erro"}`.
