@@ -15,6 +15,7 @@ usuário ─▶ CLI (app/cli.py) ─▶ Agente.responder(historico, mensagem)
 ```
 
 - O **Agente não guarda estado**: recebe o histórico e devolve a resposta. Quem guarda o histórico é a interface (a CLI, numa lista em memória).
+- **CLI:** `python -m app.cli [--debug]`. Mostra as ferramentas usadas em cada resposta; `--debug` mostra tokens e custo. Cria o banco a partir dos CSVs quando `data/emporio.db` não existe (via `criar_banco`); em execução ele continua somente leitura. Contrato: [SPEC-0005](specs/SPEC-0005-cli.md).
 - O banco é **somente leitura** em tempo de execução. Só a ingestão escreve nele.
 - Nenhum módulo fora de `app/llm/providers/` importa SDK de provedor.
 
@@ -159,7 +160,7 @@ Regras:
 ## 7. Banco (SQLite, gerado por `ingest.py`)
 
 Tabelas espelham os CSVs: `categories`, `products`, `customers`, `orders`, `order_items`, `promotions`.
-Arquivo: `data/emporio.db` (fora do git), recriado do zero por `python -m app.ingest`. Em tempo de execução é aberto com `mode=ro`. Schema completo: [SPEC-0001 §3](specs/SPEC-0001-ingestao-dados.md#3-contrato).
+Arquivo: `data/emporio.db` (fora do git), recriado do zero por `python -m app.ingest` e criado automaticamente pela CLI na primeira execução, se não existir. Em tempo de execução é aberto com `mode=ro`. Schema completo: [SPEC-0001 §3](specs/SPEC-0001-ingestao-dados.md#3-contrato).
 Extras da ingestão: `products.nome_normalizado`; `products.specs` como texto JSON validado; preços `REAL`; estoque `INTEGER`; datas ISO `TEXT`; vazio → `NULL`.
 Inconsistências conhecidas e o tratamento de cada uma: [DECISIONS.md — Tratamento dos dados](DECISIONS.md#d13--tratamento-dos-dados-e-suposições).
 
@@ -181,7 +182,7 @@ Expediente e feriados são calculados em `app/horario.py` (nacionais, Sexta-feir
 ## 9. Registro de uso (`app/uso.py`)
 Uma linha por chamada ao LLM em `logs/llm_calls.jsonl`:
 `{ts, conversa_id, turno, iteracao, provider, model, input_tokens, output_tokens, cached_tokens, latencia_ms, tools_chamadas, custo_usd, status, erro}`.
-`custo_usd` vem de `precos_modelos.py`; modelo fora da tabela → `null` (nunca inventar preço). Tokens sempre do `usage` da API; sem usage ou chamada com erro → tokens `null`. `provider`/`model` vêm do `Config`; `ts` é a hora real do registro; `status` é `ok` ou `erro`.
+`custo_usd` vem de `precos_modelos.py`; modelo fora da tabela → `null` (nunca inventar preço). Tokens sempre do `usage` da API; sem usage ou chamada com erro → tokens `null`. `provider`/`model` vêm do `Config`; `ts` é a hora real do registro; `status` é `ok` ou `erro`. O `conversa_id` da CLI tem o formato `cli-xxxxxxxx` (8 hex), para filtrar as conversas da CLI.
 
 ## 10. Avaliação (`evals/`)
 `casos.json`: lista de `{id, categoria, turnos: [str], espera: {tools: [str], contem: [str], nao_contem: [str]}}`.
