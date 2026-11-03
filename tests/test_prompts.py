@@ -45,6 +45,22 @@ def test_manual_e_pureza():
     assert simples == montar_system_prompt(agora, "A\nWhatsApp (67) 3321-4500\nB", "C\n---\nrodapé")
 
 
+def test_contatos_vem_do_prompt_e_nao_da_tool():
+    from app.tools import TOOLS
+
+    p = montar_system_prompt(datetime(2026, 11, 2, 10), texto_da_secao(7), texto_da_secao(10))
+    assert "consultar_politica para endereço" not in p
+    assert "responda com os contatos oficiais acima, sem chamar ferramenta" in p
+    assert "endereço" not in TOOLS["consultar_politica"].descricao
+
+
+def test_regra_6_pede_dados_do_pedido_ja_na_primeira_resposta():
+    p = montar_system_prompt(datetime(2026, 11, 2, 10), texto_da_secao(7), texto_da_secao(10))
+    for trecho in ("peça o que falta já nesta resposta", "dias_desde_entrega", "seguem a regra 8"):
+        assert trecho in p
+    assert "Antes de chamar consultar_pedido" not in p
+
+
 @pytest.mark.parametrize(
     ("dia", "nome"),
     [("2026-01-22", "quinta-feira"), ("2026-11-07", "sábado"), ("2026-11-08", "domingo")],

@@ -110,11 +110,11 @@ Segunda a sexta, 9h às 18h; sábado, 9h às 13h; domingo e feriados, fechado. V
 
 ## Regras
 1. Preço, estoque, disponibilidade, promoção, prazo e status de pedido só com dados que as ferramentas devolveram nesta conversa. O que não veio de uma ferramenta você não sabe: diga isso, sem inventar nem estimar.
-2. Use consultar_politica para endereço, horários, pagamento, parcelamento, trocas, devoluções, frete, garantia e privacidade; buscar_produtos e detalhes_produto para produtos; consultar_pedido para pedidos.
+2. Use consultar_politica para horários, pagamento, parcelamento, trocas, devoluções, frete, garantia e privacidade; buscar_produtos e detalhes_produto para produtos; consultar_pedido para pedidos. Endereço, telefone, WhatsApp e e-mail: responda com os contatos oficiais acima, sem chamar ferramenta.
 3. As contas já vêm prontas das ferramentas (preço promocional, desconto, preço no PIX, dias desde a compra e desde a entrega): use esses valores e não refaça contas. Em promoção, mostre o preço original, o promocional e o percentual de desconto. Sem promoção, informe também o preço no PIX.
 4. Se a busca não trouxer o produto ou a categoria, diga que não temos no momento e não sugira nada que não tenha vindo da busca.
 5. Frete para fora da região metropolitana de Campo Grande: você não calcula o valor. Informe modalidades e prazos pela política e explique que o valor é calculado no fechamento do pedido, pelo CEP.
-6. Antes de chamar consultar_pedido, peça o número do pedido e o e-mail ou telefone usado na compra.
+6. Pergunta sobre um pedido do cliente (status, entrega, troca, devolução ou arrependimento) se responde com consultar_pedido. Se faltar o número do pedido ou o e-mail ou telefone usado na compra, peça o que falta já nesta resposta, mesmo que explique a política junto. Com os dois, chame consultar_pedido e confira os prazos da política com dias_desde_compra e dias_desde_entrega. Defeito, avaria e reclamação seguem a regra 8.
 7. A loja vende só instrumentos musicais. Acessórios (cordas, palhetas, cabos, cases, pedais, amplificadores): explique com educação que não trabalhamos com eles e ofereça ajuda com instrumentos; não indique outras lojas, porque não temos uma lista de parceiras. Assuntos que não são da loja: recuse com gentileza, sem responder, e volte ao atendimento.
 8. Atendente humano (encaminhar_atendente): em reclamação, defeito ou avaria e pedido de exclusão de dados, acolha o cliente, pergunte o que aconteceu e o número do pedido, e encaminhe. Se o cliente pedir uma pessoa, pergunte uma vez como pode ajudar; se ele pedir de novo, encaminhe sem insistir. Na dúvida sobre uma política, ou se as ferramentas não resolverem, encaminhe também. Registre contato só se o cliente oferecer. Depois, informe o protocolo, o prazo de retorno e o WhatsApp que a ferramenta devolveu.
 9. Traduza para o cliente os códigos que vêm das ferramentas (ex.: delivered = entregue, credit_12x = cartão de crédito em 12x).
@@ -129,7 +129,11 @@ Segunda a sexta, 9h às 18h; sábado, 9h às 13h; domingo e feriados, fechado. V
 Hoje é {dia_semana}, {data_br} ({data_iso}), {hora} no horário de Campo Grande (MS).
 {situacao}
 ```
-Origem de cada regra: persona e tom (D06, manual §7.1); contatos (D13, ARCHITECTURE §8); horário (manual §2, §7.1); 1–3 (ARCHITECTURE §8 regras 1, 2 e 4; D07); 4 (descrição de `buscar_produtos`, SPEC-0002); 5 (manual §5.2; PRD: frete por CEP fora do escopo); 6 (D08); 7 (manual §1 e §7.1; "sugerir lojas parceiras" do manual fica de fora porque não há dados de parceiras); 8 (D11, manual §7.3 e §10); 9 (SPEC-0002 §2: códigos vão crus); 10 (injeção de prompt).
+Origem de cada regra: persona e tom (D06, manual §7.1); contatos (D13, ARCHITECTURE §8); horário (manual §2, §7.1); 1–3 (ARCHITECTURE §8 regras 1, 2 e 4; D07); 4 (descrição de `buscar_produtos`, SPEC-0002); 5 (manual §5.2; PRD: frete por CEP fora do escopo); 6 (D08; PRD critério 4); 7 (manual §1 e §7.1; "sugerir lojas parceiras" do manual fica de fora porque não há dados de parceiras); 8 (D11, manual §7.3 e §10); 9 (SPEC-0002 §2: códigos vão crus); 10 (injeção de prompt).
+
+**Revisão de 2026-11-03 (regra 6, depois das rodadas reais da SPEC-0006):** a regra antiga ("Antes de chamar consultar_pedido, peça o número do pedido e o e-mail ou telefone") só valia se o modelo decidisse consultar o pedido. Em "Me arrependi da compra, posso devolver meu pedido?", as 4 rodadas da OpenAI (`gpt-6-luna` medium e high, `gpt-5.4-mini`) responderam só a política genérica dos 7 dias, sem pedir os dados, e o cliente ficava sem saber se o pedido **dele** estava no prazo (PRD, critério 4). A regra nova diz que pergunta sobre um pedido do cliente se responde com `consultar_pedido`, manda pedir o que falta já na primeira resposta e usar `dias_desde_compra`/`dias_desde_entrega` para o prazo. A última frase mantém defeito, avaria e reclamação na regra 8 (acolher e encaminhar), para o caso `encaminhamento-defeito` não passar a exigir e-mail antes do encaminhamento.
+
+**Revisão de 2026-11-03 (regra 2, contatos):** os contatos oficiais já estão no prompt (seção "Contatos oficiais", D13), mas a regra 2 e a descrição de `consultar_politica` (SPEC-0002 §3.6) mandavam buscar o endereço no manual. Nas rodadas reais o `gpt-6-luna` chamava a tool toda vez, cerca de 2,6 s a mais para trazer um dado que já tinha. A regra 2 deixa de citar endereço e passa a mandar responder contatos direto da seção do prompt. O critério 2 do PRD-0001 foi atualizado junto.
 
 ### 3.3 `app/uso.py`
 ```python
@@ -292,6 +296,8 @@ Mesmo cliente falso da SPEC-0003 (`SimpleNamespace(responses=SimpleNamespace(cre
 - [ ] Manual incluído: contém `"Tom de voz"`, `"### 7.3 Situações Especiais"` e `"consultar a gerência"`; não contém `"Última atualização"` nem `"\n---"` (rodapé da §10 cortado); não tem `"\n\n\n"`.
 - [ ] Data, hora e situação: contém `"segunda-feira, 02/11/2026 (2026-11-02), 10:00"` e, na linha seguinte, `"A loja está fechada agora (feriado: Finados)."`; com `datetime(2026, 11, 3, 10, 0)` contém `"A loja está aberta agora, até as 18h."`.
 - [ ] Dia da semana sem locale (parametrizado): `date(2026, 1, 22)` → `"quinta-feira"`; `date(2026, 11, 7)` → `"sábado"`; `date(2026, 11, 8)` → `"domingo"` (usando `datetime.combine(d, time(15, 30))` e conferindo também `"15:30"`).
+- [x] Contatos (revisão de 2026-11-03): o prompt não contém `"consultar_politica para endereço"` e contém `"responda com os contatos oficiais acima, sem chamar ferramenta"`; `"endereço" not in TOOLS["consultar_politica"].descricao`.
+- [x] Regra 6 (revisão de 2026-11-03): contém `"peça o que falta já nesta resposta"`, `"dias_desde_entrega"` e `"seguem a regra 8"`; não contém `"Antes de chamar consultar_pedido"`.
 - [ ] Regras citadas: contém `"consultar_politica"`, `"consultar_pedido"`, `"encaminhar_atendente"`, `"não temos no momento"` e `"calculado no fechamento do pedido, pelo CEP"`.
 - [ ] Parte variável no fim: dois prompts com `agora` diferentes têm o mesmo texto antes de `"## Agora"` (`p1.split("## Agora")[0] == p2.split("## Agora")[0]`), e `P.index("Tom de voz") < P.index("## Agora")`.
 - [ ] Pura: chamar duas vezes com os mesmos argumentos dá o mesmo texto; com `diretrizes="A\nWhatsApp (67) 3321-4500\nB"` e `disposicoes="C\n---\nrodapé"`, o resultado contém `"A\nB"` e `"C"`, e não contém `"3321"` nem `"rodapé"`.
@@ -356,6 +362,8 @@ Commits seguindo o ciclo da spec (AGENTS.md, D16). Antes de cada commit: `pytest
 - [x] [AC-08] Cada chamada ao LLM gera uma linha em `logs/llm_calls.jsonl` com os campos da §3.3; custo via `custo_estimado` (`null` fora da tabela); `Resposta` soma tokens e custo do turno.
 - [x] [AC-09] `para_historico` traz só usuário + resposta final (nenhuma mensagem `tool`); com `historico=[]` o agente funciona sem memória.
 - [x] [AC-10] `criar_agente()` monta tudo em uma linha, com cada peça injetável; importar `app.agent` não carrega SDK de provedor; nenhuma dependência nova.
+- [x] [AC-13] Regra 6 revisada (2026-11-03): pergunta sobre pedido do cliente pede os dados que faltam já na primeira resposta e confere prazos com `dias_desde_compra`/`dias_desde_entrega`; defeito, avaria e reclamação continuam na regra 8.
+- [x] [AC-14] Contatos só da seção do prompt (revisão de 2026-11-03): a regra 2 e a descrição de `consultar_politica` não indicam a tool para endereço e contatos.
 - [x] [AC-TESTES] `pytest` verde, sem rede.
 - [x] [AC-LINT] `ruff check .` verde.
 - **Verificação manual (opcional, autor, custa centavos):** com a chave no `.env`, `AGENT_TODAY=2026-11-03` e o banco gerado:

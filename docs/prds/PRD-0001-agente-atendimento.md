@@ -32,7 +32,7 @@ Vender ou fechar pedido, calcular frete por CEP, login de cliente, persistência
 ## Critérios de sucesso
 O agente responde certo (e chamando a ferramenta certa) a:
 1. "Quais violões disponíveis até R$ 1000?" → `buscar_produtos`
-2. "Qual o endereço da loja?" → `consultar_politica`
+2. "Qual o endereço da loja?" → contatos oficiais do prompt (D13), sem tool e nunca o (67) 3321-4500
 3. "Quanto custa o Takamine GD20?" → `buscar_produtos` (com preço PIX)
 4. "Me arrependi, posso devolver meu pedido?" → `consultar_pedido` + `consultar_politica`, aplicando o prazo de 7 dias
 5. "Vocês vendem cordas?" / "Quem ganhou o jogo ontem?" → resposta de escopo, sem tool
