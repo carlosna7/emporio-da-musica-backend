@@ -20,3 +20,14 @@ pip install -e ".[dev]"
 cp .env.example .env          # preencha a chave do provedor
 pytest
 ```
+
+## Como conversar com o Emilio
+```bash
+cp .env.example .env          # Windows (cmd): copy .env.example .env
+# edite o .env e preencha OPENAI_API_KEY (ou troque LLM_PROVIDER e preencha a chave dele)
+python -m app.cli             # ou: python -m app.cli --debug (tokens e custo de cada resposta)
+```
+- Na primeira execução, o banco `data/emporio.db` é criado a partir dos CSVs (para recriar: `python -m app.ingest`).
+- Cada resposta mostra as ferramentas que o Emilio consultou, ex.: `[ferramentas: buscar_produtos]`.
+- `/nova` começa outra conversa; `sair`, `/sair` ou Ctrl+C encerram.
+- Anthropic ou Gemini: instale o extra antes (`pip install -e ".[anthropic]"` ou `".[gemini]"`).

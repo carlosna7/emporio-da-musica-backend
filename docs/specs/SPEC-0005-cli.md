@@ -1,6 +1,6 @@
 # SPEC-0005 — CLI: chat no terminal com o Emilio
 
-- **Status:** aprovada
+- **Status:** implementada
 - **PRD:** [PRD-0001](../prds/PRD-0001-agente-atendimento.md)
 - **Depende de:** SPEC-0004 (`criar_agente`, `Agente.responder`, `Resposta`). Usa `criar_banco` e `conectar` da SPEC-0001 e `LLMError` da SPEC-0003.
 
@@ -204,16 +204,16 @@ Commits seguindo o ciclo da spec (AGENTS.md, D16). Antes de cada commit: `pytest
 3. Testes de "Banco e montagem" *red* → `test(cli): banco automático e erros de inicialização`. `abrir_banco`, `configurar_utf8`, `main`, o bloco `__main__` e a seção do README (§4); marcar os critérios da §7; status **implementada** → `feat(cli): banco automático e erros de inicialização`.
 
 ## 7. Critérios de aceite
-- [ ] [AC-01] `python -m app.cli` abre o chat com as boas-vindas e os comandos, sem chamar o LLM; cada resposta sai como `Emilio: <texto>` seguida de `[ferramentas: ...]` (ou `nenhuma`).
-- [ ] [AC-02] Memória dentro da sessão: cada turno recebe o histórico anterior via `para_historico`, com o mesmo `conversa_id` (`cli-xxxxxxxx`) em todos os registros de `logs/llm_calls.jsonl`; `/nova` zera o histórico e troca o id.
-- [ ] [AC-03] Linha vazia e comando desconhecido (`/...`) não chamam o LLM; `sair`, `/sair` (sem diferenciar maiúsculas), Ctrl+D/EOF e Ctrl+C (na leitura ou esperando a API) encerram com a despedida e código 0.
-- [ ] [AC-04] `--debug` mostra status, chamadas, tokens, custo (`n/d` sem preço) e `conversa_id` por turno, e o total da sessão no fim; sem a flag, nada disso aparece.
-- [ ] [AC-05] Sem `data/emporio.db`, a CLI avisa e cria o banco a partir dos CSVs antes de conversar; com o banco existente, não recria.
-- [ ] [AC-06] `LLMError` e `ValueError` na montagem viram `ERRO_INICIO` no stderr, sem traceback, e código de saída 1.
-- [ ] [AC-07] Acentos corretos no terminal do Windows (UTF-8 configurado só em `main()`); nenhuma dependência nova; importar `app.cli` não carrega SDK de provedor.
-- [ ] [AC-08] README com a seção "Como conversar com o Emilio" da §4.
-- [ ] [AC-TESTES] `pytest` verde, sem rede.
-- [ ] [AC-LINT] `ruff check .` verde.
+- [x] [AC-01] `python -m app.cli` abre o chat com as boas-vindas e os comandos, sem chamar o LLM; cada resposta sai como `Emilio: <texto>` seguida de `[ferramentas: ...]` (ou `nenhuma`).
+- [x] [AC-02] Memória dentro da sessão: cada turno recebe o histórico anterior via `para_historico`, com o mesmo `conversa_id` (`cli-xxxxxxxx`) em todos os registros de `logs/llm_calls.jsonl`; `/nova` zera o histórico e troca o id.
+- [x] [AC-03] Linha vazia e comando desconhecido (`/...`) não chamam o LLM; `sair`, `/sair` (sem diferenciar maiúsculas), Ctrl+D/EOF e Ctrl+C (na leitura ou esperando a API) encerram com a despedida e código 0.
+- [x] [AC-04] `--debug` mostra status, chamadas, tokens, custo (`n/d` sem preço) e `conversa_id` por turno, e o total da sessão no fim; sem a flag, nada disso aparece.
+- [x] [AC-05] Sem `data/emporio.db`, a CLI avisa e cria o banco a partir dos CSVs antes de conversar; com o banco existente, não recria.
+- [x] [AC-06] `LLMError` e `ValueError` na montagem viram `ERRO_INICIO` no stderr, sem traceback, e código de saída 1.
+- [x] [AC-07] Acentos corretos no terminal do Windows (UTF-8 configurado só em `main()`); nenhuma dependência nova; importar `app.cli` não carrega SDK de provedor.
+- [x] [AC-08] README com a seção "Como conversar com o Emilio" da §4.
+- [x] [AC-TESTES] `pytest` verde, sem rede.
+- [x] [AC-LINT] `ruff check .` verde.
 - **Verificação manual (autor, API real, custa centavos):** com a chave no `.env` e `AGENT_TODAY=2026-11-03`:
   1. Renomear `data/emporio.db` (se existir) e rodar `python -m app.cli` → aparece `CRIANDO_BANCO` e o chat abre.
   2. "Quais violões disponíveis até R$ 1000?" → `[ferramentas: buscar_produtos]`; "Qual o endereço da loja?" → `[ferramentas: consultar_politica]`; "Vocês vendem cordas?" → `[ferramentas: nenhuma]`, redirecionando sem indicar outra loja.
