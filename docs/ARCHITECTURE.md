@@ -45,7 +45,12 @@ emporio-da-musica-backend/   # raiz do repositório
       base.py               # tipos neutros + Protocol LLMClient
       precos_modelos.py     # tabela USD por 1M tokens, por modelo
       providers/openai.py  anthropic.py  gemini.py  fake.py
-  evals/casos.json  evals/run.py  evals/relatorio.md
+  evals/
+    casos.json              # casos de avaliação (SPEC-0006)
+    avaliacao.py            # validação, verificação e relatório (puro)
+    run.py                  # python -m evals.run
+    resultados/             # relatórios versionados (um por rodada)
+    logs/                   # llm_calls.jsonl e handoffs.jsonl da avaliação (fora do git)
   scripts/gerar_exemplos.py
   logs/                     # fora do git
   tests/
@@ -185,11 +190,12 @@ Uma linha por chamada ao LLM em `logs/llm_calls.jsonl`:
 `custo_usd` vem de `precos_modelos.py`; modelo fora da tabela → `null` (nunca inventar preço). Tokens sempre do `usage` da API; sem usage ou chamada com erro → tokens `null`. `provider`/`model` vêm do `Config`; `ts` é a hora real do registro; `status` é `ok` ou `erro`. O `conversa_id` da CLI tem o formato `cli-xxxxxxxx` (8 hex), para filtrar as conversas da CLI.
 
 ## 10. Avaliação (`evals/`)
-`casos.json`: lista de `{id, categoria, turnos: [str], espera: {tools: [str], contem: [str], nao_contem: [str]}}`.
-`python -m evals.run [--sem-memoria]` roda os casos com o LLM real e `AGENT_TODAY` fixo, e grava `evals/relatorio.md` com: aprovados/reprovados por categoria, tokens, custo e latência média. `--sem-memoria` passa histórico vazio a cada turno (ablação: mede quanto a memória da conversa contribui nos casos multi-turno).
+`casos.json`: lista de `{id, categoria, descricao, agora: "AAAA-MM-DDTHH:MM", turnos: [str], espera: [ {tools, tools_proibidas, contem, contem_algum: [[str]], nao_contem} | null ]}`, com uma expectativa por turno. A verificação é determinística (tools do turno e fatos no texto normalizado: minúsculas, sem acento, sem ponto de milhar), sem LLM-juiz.
+
+`python -m evals.run [--sem-memoria] [--casos id1,id2] [--provedor P] [--modelo M] [--esforco E]` cria um agente por caso com o `agora` do caso (`conversa_id` `eval-<id>`, logs em `evals/logs/`) e grava `evals/resultados/<AAAAMMDD-HHMM>-<modelo>-<esforco>[-sem-memoria][-parcial].md` com aprovados por categoria, acerto multi-turno, tokens, custo estimado, latência média e máxima por turno e as falhas com motivo. `--sem-memoria` passa histórico vazio a cada turno (ablação da memória, D09); os overrides comparam modelos sem editar o `.env` (D05). Relatórios `-parcial` não são commitados. Contrato: [SPEC-0006](specs/SPEC-0006-avaliacao.md).
 
 ## 11. Testes
 - `pytest` em `tests/`, um arquivo por módulo (`test_ingest.py`, `test_tools.py`…).
 - Banco de teste: ingestão real dos CSVs num `tmp_path` (são pequenos), via fixture em `conftest.py`.
 - LLM: sempre `FakeLLM`. Adaptadores testados convertendo objetos de resposta falsos do SDK (sem rede).
-- Testes com rede: só em `evals/`, nunca no `pytest`.
+- Testes com rede: só em `evals/`, nunca no `pytest`. A suíte de avaliação em si é testada com `FakeLLM` em `tests/test_avaliacao.py` e `tests/test_evals_run.py`; a rodada real (`python -m evals.run`) fica fora do `pytest`.

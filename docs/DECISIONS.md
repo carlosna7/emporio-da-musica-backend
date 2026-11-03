@@ -96,7 +96,10 @@
 - **Decisão:**
   - TDD: em toda spec, os testes vêm antes do código.
   - Os testes unitários usam um **LLM falso** (respostas roteirizadas), então custam zero e sempre dão o mesmo resultado.
-  - Uma **suíte de avaliação** com 15 a 20 casos (produtos, pedidos, políticas, segurança, fora do escopo, conversas de várias mensagens) roda contra o modelo real e gera um relatório com aprovados por categoria, tokens, custo e latência. Cada caso tem critérios objetivos: qual ferramenta deveria ser chamada e quais fatos precisam (ou não podem) aparecer na resposta.
+  - Uma **suíte de avaliação** com 25 casos (produtos, pedidos, políticas, escopo e segurança, encaminhamento, horário da loja e conversas de várias mensagens) roda contra o modelo real e gera um relatório com aprovados por categoria, tokens, custo e latência. Planejei de 15 a 20, mas cobrir cada status de produto, pedidos com e sem dados, dia útil, fim de semana e feriado, e ter casos suficientes de várias mensagens para medir a memória não coube em 20.
+  - Cada caso tem critérios objetivos: qual ferramenta deveria (ou não deveria) ser chamada e quais fatos precisam (ou não podem) aparecer na resposta. Não uso um LLM como juiz: seria mais uma chamada por turno, com resultado que varia de uma rodada para outra. Fica como melhoria futura para avaliar tom e empatia.
+  - **Regra para ajustar os casos:** depois de uma rodada, só acrescento formas de dizer a mesma coisa. Nunca afrouxo uma verificação para esconder um erro real do agente; erro real vira correção no prompt ou nas ferramentas, ou limitação no README.
+  - A mesma suíte compara configurações (modelo, esforço de raciocínio, com e sem memória) sem editar o `.env`, e os relatórios ficam no repositório como evidência.
   - As conversas de `examples/` são geradas pelo agente real.
 - **Por quê:** em agente com LLM, "parece funcionar" não basta. A suíte transforma qualidade em número e pega regressões quando eu mudo o prompt ou o modelo. A taxa de aprovação mede a suíte, não a satisfação de clientes reais.
 - **Sobre usar assinatura (ChatGPT/Claude):** a assinatura serve para escrever o código, não para rodar o agente. Os exemplos e a avaliação precisam ser conversas reais com o agente do projeto, então usam a API, e custam centavos.
