@@ -51,7 +51,9 @@ class LLMClient(Protocol):
     def chat(self, system: str, messages: list[Message], tools: list[ToolSpec]) -> LLMResponse: ...
 
 
-def criar_cliente(provider: str, model: str, api_key: str | None = None) -> LLMClient:
+def criar_cliente(
+    provider: str, model: str, api_key: str | None = None, reasoning_effort: str | None = None
+) -> LLMClient:
     provider = provider.strip().lower()
     variaveis = {
         "openai": "OPENAI_API_KEY",
@@ -74,4 +76,6 @@ def criar_cliente(provider: str, model: str, api_key: str | None = None) -> LLMC
             from app.llm.providers.gemini import GeminiClient as Cliente
     except ImportError as erro:
         raise LLMError(f"instale o extra: pip install -e '.[{provider}]'") from erro
+    if provider == "openai":
+        return Cliente(model=model, api_key=chave, reasoning_effort=reasoning_effort)
     return Cliente(model=model, api_key=chave)

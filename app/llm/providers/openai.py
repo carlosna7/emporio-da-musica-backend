@@ -69,15 +69,18 @@ def de_openai(resposta, model):
 
 
 class OpenAIClient:
-    def __init__(self, model, api_key, temperature=0.2, cliente=None):
+    def __init__(self, model, api_key, temperature=0.2, cliente=None, reasoning_effort=None):
         self.model, self.temperature = model, temperature
+        self.reasoning_effort = reasoning_effort
         self._cliente = (
             cliente if cliente is not None else openai.OpenAI(api_key=api_key, timeout=60.0)
         )
 
     def chat(self, system, messages, tools):
         extras = {"store": False}
-        if self.temperature is not None:
+        if self.reasoning_effort is not None:
+            extras["reasoning"] = {"effort": self.reasoning_effort}
+        if self.temperature is not None and self.reasoning_effort in (None, "none"):
             extras["temperature"] = self.temperature
         try:
             return de_openai(

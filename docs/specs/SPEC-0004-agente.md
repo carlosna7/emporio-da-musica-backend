@@ -1,6 +1,6 @@
 # SPEC-0004 — Agente: loop ReAct, persona, memória da conversa e registro de uso
 
-- **Status:** aprovada
+- **Status:** implementada
 - **PRD:** [PRD-0001](../prds/PRD-0001-agente-atendimento.md)
 - **Depende de:** SPEC-0002 (`Contexto`, `TOOLS`, `CANAL_WHATSAPP`), SPEC-0003 (`LLMClient`, tipos neutros, `FakeLLM`, `custo_estimado`). Usa `texto_da_secao` e `conectar` da SPEC-0001.
 
@@ -344,20 +344,20 @@ Commits seguindo o ciclo da spec (AGENTS.md, D16). Antes de cada commit: `pytest
 7. Testes de montagem *red* → `test(agent): montagem do agente`. `criar_agente` e o comentário do `.env.example`; marcar os critérios da §7; status **implementada** → `feat(agent): montagem do agente`.
 
 ## 7. Critérios de aceite
-- [ ] [AC-01] `carregar_config` aplica os padrões da ARCHITECTURE §3, trata vazio como não definido, deixa o ambiente vencer o `.env` e recusa `AGENT_TODAY` fora de `AAAA-MM-DD` / `AAAA-MM-DDTHH:MM` e inteiros `< 1` com `ValueError` que cita a variável.
-- [ ] [AC-02] Uma única fonte de "agora": com `AGENT_TODAY`, data fixa (hora 10:00 ou a informada); sem ela, hora atual em UTC−4 (horário de MS). A mesma data aparece no prompt (com dia da semana em português) e em `Contexto.hoje`.
-- [ ] [AC-03] O system prompt tem a persona Emilio, os contatos oficiais da D13, o horário, as 10 regras da §3.2, as seções 7 e 10 do manual e a situação da loja calculada por `situacao_loja`; não contém `3321-4500` nem o rodapé da §10; a parte variável fica no fim.
-- [ ] [AC-12] Padrão `gpt-6-luna` com `LLM_REASONING_EFFORT=medium`: o adaptador OpenAI envia `reasoning={"effort": ...}` e só envia `temperature` sem raciocínio; Anthropic e Gemini não mudam; os testes da SPEC-0003 continuam verdes.
-- [ ] [AC-11] `situacao_loja` acerta aberta/fechada e o retorno da equipe em dia útil, sábado, domingo e feriados (nacionais, Sexta-feira Santa e o estadual de MS), conforme a tabela de `tests/test_horario.py`.
-- [ ] [AC-04] O loop envia `system + histórico[-HISTORY_WINDOW:] + mensagem`, executa todas as tool calls de cada resposta na ordem, anexa a mensagem do assistente com `raw=resp.raw` e cada resultado como `role="tool"` em JSON com `ensure_ascii=False`, até vir texto.
-- [ ] [AC-05] Tool desconhecida, argumento inválido (inclusive `ctx` vindo do modelo) e exceção inesperada viram `{"erro": ...}` para o modelo, sem quebrar o loop e sem vazar o texto de exceções inesperadas.
-- [ ] [AC-06] Mensagem acima de `MAX_MESSAGE_CHARS` é recusada sem chamar o LLM e não entra no histórico; ao atingir `MAX_TOOL_ITERATIONS` chamadas, o agente devolve o fallback com oferta de atendente e o WhatsApp oficial.
-- [ ] [AC-07] `LLMError` vira a mensagem amigável `ERRO_PROVEDOR` e uma linha de log com `status: "erro"`.
-- [ ] [AC-08] Cada chamada ao LLM gera uma linha em `logs/llm_calls.jsonl` com os campos da §3.3; custo via `custo_estimado` (`null` fora da tabela); `Resposta` soma tokens e custo do turno.
-- [ ] [AC-09] `para_historico` traz só usuário + resposta final (nenhuma mensagem `tool`); com `historico=[]` o agente funciona sem memória.
-- [ ] [AC-10] `criar_agente()` monta tudo em uma linha, com cada peça injetável; importar `app.agent` não carrega SDK de provedor; nenhuma dependência nova.
-- [ ] [AC-TESTES] `pytest` verde, sem rede.
-- [ ] [AC-LINT] `ruff check .` verde.
+- [x] [AC-01] `carregar_config` aplica os padrões da ARCHITECTURE §3, trata vazio como não definido, deixa o ambiente vencer o `.env` e recusa `AGENT_TODAY` fora de `AAAA-MM-DD` / `AAAA-MM-DDTHH:MM` e inteiros `< 1` com `ValueError` que cita a variável.
+- [x] [AC-02] Uma única fonte de "agora": com `AGENT_TODAY`, data fixa (hora 10:00 ou a informada); sem ela, hora atual em UTC−4 (horário de MS). A mesma data aparece no prompt (com dia da semana em português) e em `Contexto.hoje`.
+- [x] [AC-03] O system prompt tem a persona Emilio, os contatos oficiais da D13, o horário, as 10 regras da §3.2, as seções 7 e 10 do manual e a situação da loja calculada por `situacao_loja`; não contém `3321-4500` nem o rodapé da §10; a parte variável fica no fim.
+- [x] [AC-12] Padrão `gpt-6-luna` com `LLM_REASONING_EFFORT=medium`: o adaptador OpenAI envia `reasoning={"effort": ...}` e só envia `temperature` sem raciocínio; Anthropic e Gemini não mudam; os testes da SPEC-0003 continuam verdes.
+- [x] [AC-11] `situacao_loja` acerta aberta/fechada e o retorno da equipe em dia útil, sábado, domingo e feriados (nacionais, Sexta-feira Santa e o estadual de MS), conforme a tabela de `tests/test_horario.py`.
+- [x] [AC-04] O loop envia `system + histórico[-HISTORY_WINDOW:] + mensagem`, executa todas as tool calls de cada resposta na ordem, anexa a mensagem do assistente com `raw=resp.raw` e cada resultado como `role="tool"` em JSON com `ensure_ascii=False`, até vir texto.
+- [x] [AC-05] Tool desconhecida, argumento inválido (inclusive `ctx` vindo do modelo) e exceção inesperada viram `{"erro": ...}` para o modelo, sem quebrar o loop e sem vazar o texto de exceções inesperadas.
+- [x] [AC-06] Mensagem acima de `MAX_MESSAGE_CHARS` é recusada sem chamar o LLM e não entra no histórico; ao atingir `MAX_TOOL_ITERATIONS` chamadas, o agente devolve o fallback com oferta de atendente e o WhatsApp oficial.
+- [x] [AC-07] `LLMError` vira a mensagem amigável `ERRO_PROVEDOR` e uma linha de log com `status: "erro"`.
+- [x] [AC-08] Cada chamada ao LLM gera uma linha em `logs/llm_calls.jsonl` com os campos da §3.3; custo via `custo_estimado` (`null` fora da tabela); `Resposta` soma tokens e custo do turno.
+- [x] [AC-09] `para_historico` traz só usuário + resposta final (nenhuma mensagem `tool`); com `historico=[]` o agente funciona sem memória.
+- [x] [AC-10] `criar_agente()` monta tudo em uma linha, com cada peça injetável; importar `app.agent` não carrega SDK de provedor; nenhuma dependência nova.
+- [x] [AC-TESTES] `pytest` verde, sem rede.
+- [x] [AC-LINT] `ruff check .` verde.
 - **Verificação manual (opcional, autor, custa centavos):** com a chave no `.env`, `AGENT_TODAY=2026-11-03` e o banco gerado:
   ```python
   from app.agent import criar_agente
