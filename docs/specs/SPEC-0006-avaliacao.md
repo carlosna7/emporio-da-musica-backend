@@ -124,6 +124,8 @@ Resumo (7 categorias; 5 casos com mais de um turno; 30 turnos):
 | horario | noite-dia-util, domingo, finados | — |
 | memoria | takamine-pix (PRD 3), ukuleles-promocao | os dois |
 
+**Revisão de 2026-11-03 (depois das rodadas reais com `gpt-6-luna` e `gpt-5.4-mini`):** `politicas-endereco-contatos` não exige mais `consultar_politica`, porque os contatos oficiais já estão no prompt de sistema (D13, SPEC-0004) e responder deles está certo; o que importa continua conferido (endereço, WhatsApp e nunca o `3321`). `escopo-acessorios-cordas` troca o `contem` `"instrumento"` por um grupo que aceita também o nome de uma categoria: "posso te ajudar a encontrar um violão" redireciona para instrumentos tanto quanto a palavra "instrumento". Pela mesma razão (formas de mesmo sentido, §8-3), `produtos-categoria-vazia` aceita `"nao tem"` ("no momento a gente não tem violino") e `horario-noite-dia-util` aceita `"fechou"` ("a loja já fechou por hoje"); as duas respostas do Gemini que reprovaram por isso estavam certas.
+
 As expectativas pedem **fatos e tools**, não frases. As listas de `contem_algum` aceitam formas equivalentes (ex.: "esgotado", "sem estoque", "indisponível"). Valores em reais aparecem como o cliente leria (`"2.089,05"`); a normalização da §3.3 faz `R$ 2.089,05`, `R$2089,05` e `2089,05` casarem. Centavos `,00` ficam de fora (`"2.199"` casa com `R$ 2.199,00` e `R$ 2.199`), e `"429,9"` casa com `429,90`.
 
 Notas sobre escolhas que não são óbvias:
@@ -194,7 +196,7 @@ Conteúdo **exato** de `evals/casos.json` (copiar como está):
     "agora": "2026-11-03T10:00",
     "turnos": ["Vocês têm violino ou saxofone?"],
     "espera": [
-      {"tools": ["buscar_produtos"], "contem_algum": [["nao temos", "no momento nao", "nao trabalhamos", "nao encontrei"]], "nao_contem": ["parceira", "procure em", "mercado livre", "amazon"]}
+      {"tools": ["buscar_produtos"], "contem_algum": [["nao temos", "nao tem", "no momento nao", "nao trabalhamos", "nao encontrei"]], "nao_contem": ["parceira", "procure em", "mercado livre", "amazon"]}
     ]
   },
   {
@@ -245,7 +247,7 @@ Conteúdo **exato** de `evals/casos.json` (copiar como está):
     "agora": "2026-11-03T10:00",
     "turnos": ["Qual o endereço da loja? E o WhatsApp de vocês?"],
     "espera": [
-      {"tools": ["consultar_politica"], "contem": ["14 de maio", "3200"], "contem_algum": [["3341-4444", "33414444", "3341 4444"]], "nao_contem": ["3321"]}
+      {"contem": ["14 de maio", "3200"], "contem_algum": [["3341-4444", "33414444", "3341 4444"]], "nao_contem": ["3321"]}
     ]
   },
   {
@@ -296,7 +298,7 @@ Conteúdo **exato** de `evals/casos.json` (copiar como está):
     "agora": "2026-11-03T10:00",
     "turnos": ["Vocês vendem cordas de violão?"],
     "espera": [
-      {"tools_proibidas": ["buscar_produtos", "detalhes_produto", "consultar_pedido", "encaminhar_atendente"], "contem": ["instrumento"], "nao_contem": ["parceira", "procure em", "mercado livre", "amazon"]}
+      {"tools_proibidas": ["buscar_produtos", "detalhes_produto", "consultar_pedido", "encaminhar_atendente"], "contem_algum": [["instrumento", "violao", "guitarra", "baixo", "bateria", "teclado", "piano", "ukulele"]], "nao_contem": ["parceira", "procure em", "mercado livre", "amazon"]}
     ]
   },
   {
@@ -347,7 +349,7 @@ Conteúdo **exato** de `evals/casos.json` (copiar como está):
     "agora": "2026-11-03T19:30",
     "turnos": ["Vocês ainda estão abertos? Até que horas posso passar aí hoje?"],
     "espera": [
-      {"contem_algum": [["fechad", "fechamos", "encerr"], ["amanha", "quarta"], ["as 9", "as 09"]]}
+      {"contem_algum": [["fechad", "fechamos", "fechou", "encerr"], ["amanha", "quarta"], ["as 9", "as 09"]]}
     ]
   },
   {
@@ -535,6 +537,7 @@ def rodar_suite(casos: list[Caso], *, config: Config, conexao: sqlite3.Connectio
 def aplicar_overrides(config: Config, *, provedor: str | None = None, modelo: str | None = None,
                       esforco: str | None = None) -> Config: ...
 def filtrar_casos(casos: list[Caso], ids: list[str]) -> list[Caso]: ...
+def gravar_relatorio(pasta: Path, nome: str, texto: str) -> Path: ...
 def main(argv: list[str] | None = None) -> None: ...
 
 if __name__ == "__main__":
@@ -555,6 +558,8 @@ if __name__ == "__main__":
 
 **`filtrar_casos`:** devolve os casos cujo `id` está em `ids`, **na ordem do `casos.json`** (ids repetidos não duplicam). Se algum id não existir → `ValueError` com os ids desconhecidos, separados por vírgula.
 
+**`gravar_relatorio` (revisão de 2026-11-03):** cria a pasta se preciso e grava o texto em `pasta / nome`; se o arquivo já existir, tenta `<nome sem .md>-2.md`, `-3.md`… até achar um livre. Abre com o modo `"x"` (criação exclusiva), para que duas rodadas em paralelo nunca escrevam no mesmo arquivo. Devolve o caminho gravado. Motivo: seis rodadas iniciadas em paralelo no mesmo minuto se sobrescreveram, porque o nome vai só até o minuto.
+
 **`main(argv)`:**
 1. `argparse.ArgumentParser(prog="python -m evals.run", description="Roda a suíte de avaliação do Emilio contra o LLM real e grava o relatório em evals/resultados/.")` com:
    - `--sem-memoria` (`store_true`, help `"envia histórico vazio a cada turno (ablação da memória)"`);
@@ -566,7 +571,7 @@ if __name__ == "__main__":
 5. `try:` `config = aplicar_overrides(carregar_config(), provedor=args.provedor, modelo=args.modelo, esforco=args.esforco)`; `llm = criar_cliente(config.provider, config.model, reasoning_effort=config.reasoning_effort)`; `conexao = abrir_banco(CAMINHO_BANCO)` / `except (LLMError, ValueError) as erro:` → `ERRO_INICIO` no stderr e `sys.exit(1)`, sem traceback. **Um** cliente para a suíte toda (os adaptadores não guardam estado entre chamadas).
 6. `inicio = datetime.now()` (hora real, para o nome e o cabeçalho do relatório).
 7. `resultados = rodar_suite(casos, config=config, conexao=conexao, pasta_logs=PASTA_LOGS_EVAL, llm_para=lambda caso: llm, sem_memoria=args.sem_memoria)`.
-8. `parcial = bool(args.casos)`; `texto = montar_relatorio(resultados, config=config, sem_memoria=args.sem_memoria, quando=inicio, parcial=parcial)`; `caminho = PASTA_RESULTADOS / nome_relatorio(config, args.sem_memoria, inicio, parcial)`; `PASTA_RESULTADOS.mkdir(parents=True, exist_ok=True)`; `caminho.write_text(texto, encoding="utf-8")`.
+8. `parcial = bool(args.casos)`; `texto = montar_relatorio(resultados, config=config, sem_memoria=args.sem_memoria, quando=inicio, parcial=parcial)`; `caminho = gravar_relatorio(PASTA_RESULTADOS, nome_relatorio(config, args.sem_memoria, inicio, parcial), texto)`.
 9. `print(texto.split("\n## Casos")[0])` (cabeçalho, resultado e uso no terminal) e `print(f"Relatório: {caminho}")`.
 10. Termina normalmente (código 0), mesmo com casos reprovados. A avaliação **mede**, não bloqueia: não é um teste de CI.
 
@@ -694,6 +699,9 @@ def linhas(arquivo) -> list[dict]:   # json.loads de cada linha ([] se não exis
 - [ ] Exceção num caso não derruba: `llm_para` que levanta `RuntimeError("sem chave")` para `a` e devolve `FakeLLM([resposta_texto("oi")])` para `b` → `resultados[0].erro == "RuntimeError: sem chave"`, `resultados[0].turnos == []`, `resultados[1].aprovado`.
 - [ ] Um turno reprovado não interrompe o caso: 2 turnos, `espera=(Espera(contem=("x",)), None)`, roteiro `[resposta_texto("a"), resposta_texto("b")]` → `len(turnos) == 2` e `len(llms[...].chamadas) == 2`.
 
+**Relatório sem sobrescrever (revisão de 2026-11-03)**
+- [x] `gravar_relatorio(tmp_path / "res", "r.md", "a")` cria a pasta e devolve `tmp_path / "res" / "r.md"`; chamando de novo com `"b"` e `"c"` → `r-2.md` e `r-3.md`; os três arquivos guardam `"a"`, `"b"` e `"c"` (nenhum foi sobrescrito).
+
 **Flags e `main`**
 - [ ] `aplicar_overrides(CFG)` é igual a `CFG`; `aplicar_overrides(Config(), provedor="openai", modelo="gpt-5.4-mini", esforco="none")` → `provider == "openai"`, `model == "gpt-5.4-mini"`, `reasoning_effort == "none"`, demais campos iguais aos de `Config()`; só `modelo` → só `model` muda.
 - [ ] `filtrar_casos([caso("a"), caso("b"), caso("c")], ["c", "a", "a"])` → ids `["a", "c"]` (ordem do arquivo, sem repetir); `["a", "x", "y"]` → `ValueError` com `"x"` e `"y"` na mensagem.
@@ -724,6 +732,8 @@ Commits seguindo o ciclo da spec (AGENTS.md, D16; escopo `evals`). Antes de cada
 - [x] [AC-06] O relatório Markdown tem configuração, limites, aprovados por categoria e total, acerto multi-turno, tokens, custo estimado (`n/d` se algum for desconhecido), latência média e máxima por turno, a tabela de casos e as falhas com motivo, ferramentas e resposta truncada; ele é gravado em `evals/resultados/<AAAAMMDD-HHMM>-<modelo>-<esforco>[-sem-memoria][-parcial].md` e o resumo sai no terminal.
 - [x] [AC-07] `--provedor`, `--modelo` e `--esforco` sobrescrevem o `.env` (via `dataclasses.replace`) sem editá-lo; `--casos` roda um subconjunto, e id desconhecido sai com código 2 antes de criar o cliente; erro de configuração sai com código 1, sem traceback.
 - [x] [AC-08] `python -m evals.run` funciona a partir da raiz e os testes importam `evals` sem mudar o `pyproject.toml`; importar `evals.run` não carrega SDK de provedor; nenhuma dependência nova; nenhum teste usa a rede.
+- [x] [AC-09] `politicas-endereco-contatos` não exige `consultar_politica` e `escopo-acessorios-cordas` aceita o nome de uma categoria; `produtos-categoria-vazia` aceita `"nao tem"` e `horario-noite-dia-util` aceita `"fechou"` (revisão de 2026-11-03).
+- [x] [AC-10] Relatório com nome já existente ganha o sufixo `-2`, `-3`… em vez de sobrescrever (revisão de 2026-11-03).
 - [x] [AC-TESTES] `pytest` verde, sem rede.
 - [x] [AC-LINT] `ruff check .` verde.
 - **Verificação manual (autor, API real, ~US$ 0,30 a 0,65 no total):** com a chave no `.env` e o modelo padrão (`gpt-6-luna`, `medium`):

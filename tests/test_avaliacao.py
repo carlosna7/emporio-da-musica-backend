@@ -71,6 +71,12 @@ def test_casos_reais_cobrem_prd_e_horarios():
         "encaminhamento-atendente-insiste",
     } <= por_id.keys()
     assert "3321" in por_id["politicas-endereco-contatos"].espera[0].nao_contem
+    assert por_id["politicas-endereco-contatos"].espera[0].tools == ()
+    cordas = por_id["escopo-acessorios-cordas"].espera[0]
+    assert cordas.contem == ()
+    assert {"instrumento", "violao", "ukulele"} <= set(cordas.contem_algum[0])
+    assert "nao tem" in por_id["produtos-categoria-vazia"].espera[0].contem_algum[0]
+    assert "fechou" in por_id["horario-noite-dia-util"].espera[0].contem_algum[0]
     for caso in casos:
         for espera in caso.espera:
             if espera and "encaminhar_atendente" in espera.tools:

@@ -56,7 +56,7 @@
     "agora": "2026-11-03T10:00",
     "turnos": ["Vocês têm violino ou saxofone?"],
     "espera": [
-      {"tools": ["buscar_produtos"], "contem_algum": [["nao temos", "no momento nao", "nao trabalhamos", "nao encontrei"]], "nao_contem": ["parceira", "procure em", "mercado livre", "amazon"]}
+      {"tools": ["buscar_produtos"], "contem_algum": [["nao temos", "nao tem", "no momento nao", "nao trabalhamos", "nao encontrei"]], "nao_contem": ["parceira", "procure em", "mercado livre", "amazon"]}
     ]
   },
   {
@@ -107,7 +107,7 @@
     "agora": "2026-11-03T10:00",
     "turnos": ["Qual o endereço da loja? E o WhatsApp de vocês?"],
     "espera": [
-      {"tools": ["consultar_politica"], "contem": ["14 de maio", "3200"], "contem_algum": [["3341-4444", "33414444", "3341 4444"]], "nao_contem": ["3321"]}
+      {"contem": ["14 de maio", "3200"], "contem_algum": [["3341-4444", "33414444", "3341 4444"]], "nao_contem": ["3321"]}
     ]
   },
   {
@@ -158,7 +158,7 @@
     "agora": "2026-11-03T10:00",
     "turnos": ["Vocês vendem cordas de violão?"],
     "espera": [
-      {"tools_proibidas": ["buscar_produtos", "detalhes_produto", "consultar_pedido", "encaminhar_atendente"], "contem": ["instrumento"], "nao_contem": ["parceira", "procure em", "mercado livre", "amazon"]}
+      {"tools_proibidas": ["buscar_produtos", "detalhes_produto", "consultar_pedido", "encaminhar_atendente"], "contem_algum": [["instrumento", "violao", "guitarra", "baixo", "bateria", "teclado", "piano", "ukulele"]], "nao_contem": ["parceira", "procure em", "mercado livre", "amazon"]}
     ]
   },
   {
@@ -209,7 +209,7 @@
     "agora": "2026-11-03T19:30",
     "turnos": ["Vocês ainda estão abertos? Até que horas posso passar aí hoje?"],
     "espera": [
-      {"contem_algum": [["fechad", "fechamos", "encerr"], ["amanha", "quarta"], ["as 9", "as 09"]]}
+      {"contem_algum": [["fechad", "fechamos", "fechou", "encerr"], ["amanha", "quarta"], ["as 9", "as 09"]]}
     ]
   },
   {

@@ -152,6 +152,13 @@ def test_aplicar_overrides_preserva_campos_omitidos():
     assert run.aplicar_overrides(CFG, modelo="outro") == replace(CFG, model="outro")
 
 
+def test_gravar_relatorio_nao_sobrescreve(tmp_path):
+    pasta = tmp_path / "res"
+    caminhos = [run.gravar_relatorio(pasta, "r.md", texto) for texto in ("a", "b", "c")]
+    assert [c.name for c in caminhos] == ["r.md", "r-2.md", "r-3.md"]
+    assert [c.read_text(encoding="utf-8") for c in caminhos] == ["a", "b", "c"]
+
+
 def test_filtrar_casos_preserva_ordem_do_arquivo_sem_duplicar():
     casos = [caso("a"), caso("b"), caso("c")]
     assert [c.id for c in run.filtrar_casos(casos, ["c", "a", "a"])] == ["a", "c"]

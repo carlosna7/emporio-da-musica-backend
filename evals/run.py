@@ -1,6 +1,7 @@
 """Executa os casos de avaliação contra o LLM configurado."""
 
 import argparse
+import itertools
 import sqlite3
 import sys
 import time
@@ -93,6 +94,20 @@ def filtrar_casos(casos: list[Caso], ids: list[str]) -> list[Caso]:
     return [caso for caso in casos if caso.id in selecionados]
 
 
+def gravar_relatorio(pasta: Path, nome: str, texto: str) -> Path:
+    pasta.mkdir(parents=True, exist_ok=True)
+    base = nome.removesuffix(".md")
+    for numero in itertools.count(1):
+        caminho = pasta / (nome if numero == 1 else f"{base}-{numero}.md")
+        # "x" falha se o arquivo existe: rodadas em paralelo nunca gravam no mesmo nome.
+        try:
+            with caminho.open("x", encoding="utf-8") as arquivo:
+                arquivo.write(texto)
+        except FileExistsError:
+            continue
+        return caminho
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="python -m evals.run",
@@ -150,9 +165,9 @@ def main(argv: list[str] | None = None) -> None:
     texto = montar_relatorio(
         resultados, config=config, sem_memoria=args.sem_memoria, quando=inicio, parcial=parcial,
     )
-    caminho = PASTA_RESULTADOS / nome_relatorio(config, args.sem_memoria, inicio, parcial)
-    PASTA_RESULTADOS.mkdir(parents=True, exist_ok=True)
-    caminho.write_text(texto, encoding="utf-8")
+    caminho = gravar_relatorio(
+        PASTA_RESULTADOS, nome_relatorio(config, args.sem_memoria, inicio, parcial), texto,
+    )
     print(texto.split("\n## Casos", 1)[0])
     print(f"Relatório: {caminho}")
 
