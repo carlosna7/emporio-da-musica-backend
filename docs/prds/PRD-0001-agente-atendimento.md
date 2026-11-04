@@ -27,7 +27,7 @@ Cliente final da loja, pela CLI (um site é opcional, depois).
 | R9 | Registrar tokens e custo de cada chamada ao LLM | D14 |
 
 ## Fora do escopo
-Vender ou fechar pedido, calcular frete por CEP, login de cliente, persistência de histórico, classificação de intenção, dashboard. O site (API + front) é opcional e, se for feito, terá um PRD próprio (PRD-0002) depois que este estiver concluído.
+Vender ou fechar pedido, calcular frete por CEP, login de cliente, persistência de histórico, classificação de intenção, dashboard. O site (API + front) era opcional e foi feito depois deste PRD concluído: a API HTTP está na [SPEC-0008](../specs/SPEC-0008-api-http.md) e o front vive no [repositório próprio](https://github.com/carlosna7/emporio-da-musica-frontend).
 
 ## Critérios de sucesso
 O agente responde certo (e chamando a ferramenta certa) a:
