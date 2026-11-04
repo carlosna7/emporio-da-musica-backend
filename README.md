@@ -209,9 +209,17 @@ O horário da loja é UTC−4, de Campo Grande/MS. `AGENT_TODAY` permite fixar o
 
 ## Uso de IA
 
-Usei Claude Opus para planejamento e discussão das decisões; specs foram preparadas por subagentes Opus a partir do PRD, arquitetura e dados. A implementação usa modelos menores, uma spec por vez, com testes escritos e executados em red antes do código. O fluxo prevê revisão humana das specs e de cada passo antes do commit ([D17](docs/DECISIONS.md#d17--uso-de-assistentes-de-código), [AGENTS.md](AGENTS.md)).
+Usei um modelo para cada etapa, escolhido pelo custo de errar naquela etapa ([D17](docs/DECISIONS.md#d17--uso-de-assistentes-de-código), [AGENTS.md](AGENTS.md)):
 
-O ciclo de commits separa `docs`, `test` em red e `feat` em green para deixar o progresso de TDD verificável no histórico ([D16](docs/DECISIONS.md#d16--repositório)). Avaliações e exemplos usam a API real do agente do projeto; a assinatura de um assistente foi usada para escrever código ([D12](docs/DECISIONS.md#d12--testes-e-avaliação)). Este README foi redigido com IA; o autor aprovou a entrega após a revisão assistida dos exemplos e da documentação.
+| Etapa | Modelo | Como usei |
+| --- | --- | --- |
+| Planejamento, PRD e specs | Claude Opus | Par de discussão para as decisões: eu levei as dúvidas e as opções e decidi. Com templates de PRD e spec, o Opus escreveu o [PRD](docs/prds/) e as [specs](docs/specs/); cada spec parte do PRD, do ARCHITECTURE e dos dados reais. |
+| Implementação | GPT-6.1 Terra, em subagentes do ChatGPT | Uma spec por vez, com os testes escritos e rodados em red antes do código. |
+| Revisão | Claude Opus e eu | O Opus conferiu o código contra a spec; eu revisei cada spec antes de implementar e cada passo antes do commit. |
+
+O Opus ficou onde o erro custa mais: uma spec ambígua contamina toda a implementação. Com a spec detalhada e os testes prontos, a implementação vira uma tarefa bem delimitada. Nela, o Terra é mais barato e mais eficiente que o Sonnet, e usar o Opus seria gastar à toa. Se alguma tarefa pedisse mais desempenho, eu poderia fazer tudo com o Opus.
+
+O ciclo de commits separa `docs`, `test` em red e `feat` em green para deixar o progresso de TDD verificável no histórico ([D16](docs/DECISIONS.md#d16--repositório)). Esses modelos foram usados só no desenvolvimento; o agente em si roda com `gpt-6-luna` ([D05](docs/DECISIONS.md#d05--modelo-e-provedor-openai-com-o-código-preparado-para-outros)), e as avaliações e os exemplos usam a API real dele ([D12](docs/DECISIONS.md#d12--testes-e-avaliação)). Redigi este README com ajuda de IA e revisei os exemplos e a documentação antes da entrega.
 
 ## O que ficaria para depois
 
