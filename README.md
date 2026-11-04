@@ -12,9 +12,7 @@ Construí um agente de atendimento por texto, em Python, para a Empório da Mús
 
 ## Como rodar
 
-Requer Python 3.12+ e uma chave de API do provedor escolhido. A interface é um chat no terminal; o banco é criado dos dados versionados.
-
-Este repositório ainda não expõe uma API HTTP para um frontend. A integração web exige uma camada de API sobre `Agente.responder`, prevista como evolução opcional no PRD-0002 ([escopo do projeto](docs/prds/PRD-0001-agente-atendimento.md#fora-do-escopo), [D10](docs/DECISIONS.md#d10--interface-cli)).
+Requer Python 3.12+ e uma chave de API do provedor escolhido. A interface oficial é um chat no terminal; o mesmo agente também responde por uma [API HTTP](#api-http) para o site. O banco é criado dos dados versionados.
 
 ```bash
 python -m venv .venv
@@ -41,6 +39,24 @@ python -m app.cli             # ou: python -m app.cli --debug
 - Cada resposta mostra as ferramentas consultadas, por exemplo `[ferramentas: buscar_produtos]`. Com `--debug`, também mostra tokens e custo por resposta.
 - `/nova` começa outra conversa; `sair`, `/sair` ou Ctrl+C encerram.
 - Para Anthropic ou Gemini, instale o extra antes: `pip install -e ".[anthropic]"` ou `pip install -e ".[gemini]"`.
+
+### API HTTP
+
+A API não guarda estado: o site envia a mensagem com o histórico e recebe a resposta e o trecho a acrescentar ao histórico ([SPEC-0008](docs/specs/SPEC-0008-api-http.md), [D10](docs/DECISIONS.md#d10--interface-cli)).
+
+```bash
+python -m uvicorn api.index:app --reload   # documentação interativa em http://localhost:8000/docs
+```
+
+```json
+POST /chat
+{"mensagem": "E em quantas vezes posso parcelar?", "historico": [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}], "conversa_id": "site-1"}
+→ {"resposta": "...", "ferramentas": ["consultar_politica"], "status": "ok", "conversa_id": "site-1", "historico": [...], "uso": {...}}
+```
+
+- `GET /health` confere se está no ar. Com `API_TOKEN` no ambiente, `/chat` exige `Authorization: Bearer <token>`; `CORS_ORIGINS` libera chamadas diretas do navegador.
+- Na Vercel, o preset Python encontra `api/index.py` sem `vercel.json`. O banco é criado em `/tmp` na primeira requisição, e logs e protocolos de encaminhamento ficam em `/tmp`, que não persiste.
+- Endpoint público gasta a chave: use `API_TOKEN`, limite de gasto no provedor e rate-limit no firewall da hospedagem ([D15](docs/DECISIONS.md#d15--publicação-se-houver-front)).
 
 Testes unitários usam `FakeLLM`, sem rede nem custo:
 
@@ -83,7 +99,7 @@ Os cabeçalhos distinguem a data simulada do atendimento da data real de geraç�
 ## Arquitetura
 
 ```text
-Cliente → CLI → Agente.responder(histórico, mensagem)
+Cliente → CLI | API HTTP → Agente.responder(histórico, mensagem)
                  ├─ LLMClient → OpenAI | Anthropic | Gemini | FakeLLM
                  ├─ ferramentas → SQLite (somente leitura) / políticas por tópico
                  └─ logs de chamadas e encaminhamentos
@@ -185,7 +201,7 @@ O horário da loja é UTC−4, de Campo Grande/MS. `AGENT_TODAY` permite fixar o
 3. Produtos 135 a 144 têm nomes e descrições divergentes; confio no nome ([D13](docs/DECISIONS.md#d13--tratamento-dos-dados-e-suposições)).
 4. Os 25 casos usam substring, com falsos negativos (como “você ainda pode solicitar a devolução”, reprovado no `low`) e verificações fracas, como “não inventar valor de frete”. Aprovação não mede satisfação de clientes ([D05](docs/DECISIONS.md#d05--modelo-e-provedor-openai-com-o-código-preparado-para-outros), [D12](docs/DECISIONS.md#d12--testes-e-avaliação)).
 5. Sem persistência entre sessões: fechar a CLI apaga a conversa ([D09](docs/DECISIONS.md#d09--memória-da-conversa-sim-persistência-do-histórico-não)).
-6. Site e API estão fora do escopo; o PRD-0002 é opcional ([D10](docs/DECISIONS.md#d10--interface-cli)).
+6. Na API publicada na Vercel, logs e protocolos de encaminhamento ficam em `/tmp`: somem quando a instância reinicia e podem repetir a numeração entre instâncias ([SPEC-0008](docs/specs/SPEC-0008-api-http.md#8-riscos-e-pontos-em-aberto)).
 7. Feriados municipais de Campo Grande ainda não entram no expediente ([arquitetura](docs/ARCHITECTURE.md#8-system-prompt-apppromptspy)).
 8. No [exemplo 02](examples/02-arrependimento-no-prazo.md), a resposta diz que o pedido chegou “há 4 dias”, mas não explicita 18/01/2026 como a tabela de revisão pede. No terceiro turno, pede desculpa por uma ambiguidade que não ocorreu. O prazo e as condições de devolução estão corretos; mantive a amostra sem edição ou nova tentativa.
 
@@ -197,7 +213,7 @@ O ciclo de commits separa `docs`, `test` em red e `feat` em green para deixar o 
 
 ## O que ficaria para depois
 
-- Site com API sem estado e frontend, num PRD-0002 opcional, com chave no backend, rate-limit e limite de gasto ([D10](docs/DECISIONS.md#d10--interface-cli), [D15](docs/DECISIONS.md#d15--publicação-se-houver-front)).
+- Logs e encaminhamentos da API num armazenamento persistente, em vez de `/tmp` ([SPEC-0008](docs/specs/SPEC-0008-api-http.md)).
 - Persistência entre sessões se houver login e necessidade real ([D09](docs/DECISIONS.md#d09--memória-da-conversa-sim-persistência-do-histórico-não)).
 - LLM-juiz para tom e empatia e `--repeticoes` para medir variância ([SPEC-0006](docs/specs/SPEC-0006-avaliacao.md#8-riscos-e-pontos-em-aberto)).
 - Classificação de intenção quando houver tráfego real ([D14](docs/DECISIONS.md#d14--custo-e-observabilidade)).
@@ -208,7 +224,7 @@ O ciclo de commits separa `docs`, `test` em red e `feat` em green para deixar o 
 ## Documentação
 
 - [PRDs](docs/prds/) e [PRD-0001 — Agente de atendimento](docs/prds/PRD-0001-agente-atendimento.md): problema, requisitos e critérios de sucesso.
-- [Specs](docs/specs/): contratos e testes de cada entrega; [SPEC-0007](docs/specs/SPEC-0007-exemplos-readme.md) cobre exemplos e README.
+- [Specs](docs/specs/): contratos e testes de cada entrega; [SPEC-0007](docs/specs/SPEC-0007-exemplos-readme.md) cobre exemplos e README; [SPEC-0008](docs/specs/SPEC-0008-api-http.md), a API HTTP.
 - [Decisões técnicas](docs/DECISIONS.md): escolhas, justificativas e alternativas descartadas.
 - [Arquitetura](docs/ARCHITECTURE.md): módulos, tipos, configuração e contratos.
 - [AGENTS.md](AGENTS.md): regras de escopo, TDD e contribuição para agentes de código.

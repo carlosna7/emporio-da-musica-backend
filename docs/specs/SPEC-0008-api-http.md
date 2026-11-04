@@ -1,6 +1,6 @@
 # SPEC-0008 — API HTTP sem estado para o site
 
-- **Status:** aprovada
+- **Status:** implementada
 - **PRD:** [PRD-0001](../prds/PRD-0001-agente-atendimento.md) (evolução opcional prevista em "Fora do escopo")
 - **Depende de:** SPEC-0004 (`criar_agente`, `Agente.responder`, `Resposta`). Usa `criar_banco` e `conectar` da SPEC-0001 e `criar_cliente` da SPEC-0003.
 
@@ -70,12 +70,12 @@ Falha do provedor não vira erro HTTP: o agente já devolve `status="erro_llm"` 
 ## 5. Testes (escrever ANTES do código)
 Usam `TestClient` do FastAPI, `FakeLLM` e o banco temporário da fixture `banco`.
 
-- [ ] Caso feliz: `GET /health` devolve status e modelo.
-- [ ] Caso feliz: `POST /chat` executa uma ferramenta, devolve resposta, ferramentas, status, `conversa_id` informado, histórico do turno e tokens; o log grava o `conversa_id`.
-- [ ] Memória: o histórico enviado chega ao LLM antes da mensagem nova; sem `conversa_id`, a API gera um com prefixo `api-`.
-- [ ] Entrada inválida → 422 sem chamar o LLM: mensagem vazia, papel `tool` no histórico, `conversa_id` com barras, histórico com 41 itens.
-- [ ] Token: com `API_TOKEN`, sem cabeçalho ou com token errado → 401; com o certo → 200.
-- [ ] Banco: `preparar_banco` usa o existente e, sem ele, cria a cópia em `PASTA_TEMPORARIA`.
+- [x] Caso feliz: `GET /health` devolve status e modelo.
+- [x] Caso feliz: `POST /chat` executa uma ferramenta, devolve resposta, ferramentas, status, `conversa_id` informado, histórico do turno e tokens; o log grava o `conversa_id`.
+- [x] Memória: o histórico enviado chega ao LLM antes da mensagem nova; sem `conversa_id`, a API gera um com prefixo `api-`.
+- [x] Entrada inválida → 422 sem chamar o LLM: mensagem vazia, papel `tool` no histórico, `conversa_id` com barras, histórico com 41 itens.
+- [x] Token: com `API_TOKEN`, sem cabeçalho ou com token errado → 401; com o certo → 200.
+- [x] Banco: `preparar_banco` usa o existente e, sem ele, cria a cópia em `PASTA_TEMPORARIA`.
 - **Fixtures/mocks:** `banco` do `conftest.py`, `FakeLLM`, `monkeypatch` para `API_TOKEN` e `PASTA_TEMPORARIA`.
 
 ## 6. Plano
@@ -83,13 +83,13 @@ Usam `TestClient` do FastAPI, `FakeLLM` e o banco temporário da fixture `banco`
 2. Implementar `app/api.py`, `api/index.py`, `.vercelignore`, dependências, `.env.example` e README → commit `feat(api): ...`
 
 ## 7. Critérios de aceite
-- [ ] [AC-01] `uvicorn api.index:app` sobe; `GET /health` → 200 e `/docs` mostra as rotas.
-- [ ] [AC-02] Uma conversa de vários turnos pelo `/chat`, reenviando o `historico` devolvido, mantém o contexto.
-- [ ] [AC-03] Com `API_TOKEN` definido, `/chat` sem o token → 401.
-- [ ] [AC-04] Na Vercel, sem `data/emporio.db` no deploy, o banco é criado em `/tmp` e os logs vão para `/tmp`.
-- [ ] [AC-TESTES] `pytest` verde
-- [ ] [AC-LINT] `ruff check .` verde
-- **Verificação manual:** deploy na Vercel → `/health` 200 e conversa de 4 turnos pelo `/chat` com histórico.
+- [x] [AC-01] `uvicorn api.index:app` sobe; `GET /health` → 200 e `/docs` mostra as rotas.
+- [x] [AC-02] Uma conversa de vários turnos pelo `/chat`, reenviando o `historico` devolvido, mantém o contexto.
+- [x] [AC-03] Com `API_TOKEN` definido, `/chat` sem o token → 401.
+- [x] [AC-04] Na Vercel, sem `data/emporio.db` no deploy, o banco é criado em `/tmp` e os logs vão para `/tmp`.
+- [x] [AC-TESTES] `pytest` verde
+- [x] [AC-LINT] `ruff check .` verde
+- **Verificação manual:** deploy na Vercel → `/health` 200 e conversa de 4 turnos pelo `/chat` com histórico (feita em 03/11/2026).
 
 ## 8. Riscos e pontos em aberto
 - Sem `vercel.json`: o preset Python da Vercel encontra `api/index.py` sozinho. Um rewrite para `/api/index` faz o FastAPI receber esse caminho em toda requisição e responder 404.

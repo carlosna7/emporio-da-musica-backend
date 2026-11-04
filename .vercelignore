@@ -1,0 +1,12 @@
+.venv/
+.env
+.pytest-tmp*/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+logs/
+data/*.db
+docs/
+evals/
+examples/
+tests/
