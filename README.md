@@ -2,6 +2,8 @@
 
 Construí um agente de atendimento por texto, em Python, para a Empório da Música, loja fictícia de instrumentos em Campo Grande/MS. O Emilio consulta catálogo, estoque, promoções, pedidos e políticas, mantém o contexto da conversa e encaminha para uma pessoa quando precisa. Este é o protótipo do desafio técnico AI Engineer da Artefact.
 
+**Teste online:** também fiz o site da loja, com o Emilio no chat, publicado em **https://emporio-da-musica-frontend.vercel.app**. Dá para conversar com o agente direto por lá ou clonar o [repositório do frontend](https://github.com/carlosna7/emporio-da-musica-frontend) e rodar localmente (`npm install` e `npm run dev`); por padrão, ele usa a API publicada deste backend.
+
 ## Em resumo
 
 - Loop ReAct próprio com cinco ferramentas: dados no SQLite, políticas por tópico e encaminhamento local ([D03](docs/DECISIONS.md#d03--abordagem-do-agente-react-via-function-calling)).
