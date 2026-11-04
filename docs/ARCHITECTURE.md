@@ -25,7 +25,8 @@ usuário ─▶ CLI (app/cli.py) ─▶ Agente.responder(historico, mensagem)
 emporio-da-musica-backend/   # raiz do repositório
   AGENTS.md  CLAUDE.md  README.md
   docs/                     # DECISIONS, ARCHITECTURE, prds/, specs/
-  pyproject.toml            # deps: openai, python-dotenv; extras [anthropic], [gemini]; dev: pytest, ruff
+  pyproject.toml            # deps: fastapi, openai, python-dotenv; extras [anthropic], [gemini]; dev: httpx, pytest, ruff, uvicorn
+  .vercelignore             # o que não sobe no deploy da Vercel
   .env.example
   data/raw/                 # CSVs + políticas_da_loja.pdf (cópias)
   data/politicas.md         # manual convertido e revisado
@@ -41,6 +42,7 @@ emporio-da-musica-backend/   # raiz do repositório
     agent.py                # loop ReAct, despachante e criar_agente()
     uso.py                  # registro de chamadas e custo estimado
     cli.py
+    api.py                  # API HTTP sem estado: criar_app(), /health e /chat (SPEC-0008)
     llm/
       base.py               # tipos neutros + Protocol LLMClient
       precos_modelos.py     # tabela USD por 1M tokens, por modelo
@@ -53,6 +55,7 @@ emporio-da-musica-backend/   # raiz do repositório
     logs/                   # llm_calls.jsonl e handoffs.jsonl da avaliação (fora do git)
     exemplos.py             # python -m evals.exemplos: gera examples/ com o agente real (SPEC-0007)
     logs/exemplos/          # llm_calls.jsonl e handoffs.jsonl da geração dos exemplos (fora do git)
+  api/index.py              # entrada da Vercel: app = criar_app()
   logs/                     # fora do git
   tests/
   examples/                 # conversas de exemplo (entregável do desafio)
@@ -70,6 +73,8 @@ emporio-da-musica-backend/   # raiz do repositório
 | `MAX_TOOL_ITERATIONS` | `5` | máximo de chamadas ao LLM por turno |
 | `HISTORY_WINDOW` | `20` | mensagens de histórico enviadas ao modelo |
 | `MAX_MESSAGE_CHARS` | `1000` | mensagens maiores são recusadas sem chamar o LLM |
+| `API_TOKEN` | vazio | se definido, `POST /chat` exige `Authorization: Bearer <token>` (SPEC-0008) |
+| `CORS_ORIGINS` | vazio | origens liberadas na API, separadas por vírgula; vazio = sem CORS |
 
 Valor vazio = padrão; os inteiros precisam ser `>= 1`; o ambiente vence o `.env`.
 
@@ -201,4 +206,4 @@ Uma linha por chamada ao LLM em `logs/llm_calls.jsonl`:
 - `pytest` em `tests/`, um arquivo por módulo (`test_ingest.py`, `test_tools.py`…).
 - Banco de teste: ingestão real dos CSVs num `tmp_path` (são pequenos), via fixture em `conftest.py`.
 - LLM: sempre `FakeLLM`. Adaptadores testados convertendo objetos de resposta falsos do SDK (sem rede).
-- Testes com rede: só em `evals/`, nunca no `pytest`. A suíte de avaliação em si é testada com `FakeLLM` em `tests/test_avaliacao.py` e `tests/test_evals_run.py`; a rodada real (`python -m evals.run`) fica fora do `pytest`. O gerador de exemplos é testado com `FakeLLM` em `tests/test_exemplos.py`; `tests/test_readme.py` confere as seções obrigatórias e os links do README.
+- Testes com rede: só em `evals/`, nunca no `pytest`. A suíte de avaliação em si é testada com `FakeLLM` em `tests/test_avaliacao.py` e `tests/test_evals_run.py`; a rodada real (`python -m evals.run`) fica fora do `pytest`. O gerador de exemplos é testado com `FakeLLM` em `tests/test_exemplos.py`; `tests/test_readme.py` confere as seções obrigatórias e os links do README. A API é testada com `TestClient` e `FakeLLM` em `tests/test_api.py`.
